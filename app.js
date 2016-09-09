@@ -54,33 +54,42 @@ $(() => {
 
     var vertBuf = gl.createBuffer();
 
-    function invalidateCanvas(){
+    function tick(){
+        var t = (Date.now() % 2000) / 2000 * 2 * Math.PI;
+        var mvMatrix = [
+            Math.cos(t), 0, Math.sin(t), 0,
+            0, 1, 0, 0,
+            -Math.sin(t), 0, Math.cos(t), 0,
+            0, -1/2, 2, 1
+        ];
+        gl.useProgram(shaderProgram);
+        var uMvMatrix = gl.getUniformLocation(shaderProgram, 'mvMatrix');
+        gl.uniformMatrix4fv(uMvMatrix, false, new Float32Array(mvMatrix));
+        window.requestAnimationFrame(tick);
+    }
+    tick();
+
+    function invalidateCanvasSize(){
         var w = $(gl.canvas).width();
         var h = $(gl.canvas).height();
         var aspect = w/h;
         var f = 1000;
         var n = 1;
-        var mvMatrix = [
-            1, 0, 0, 0,
-            0, 1, 0, 0,
-            0, 0, 1, 0,
-            0, -1/2, 2, 1
-        ];
         var projMatrix = [
             1/aspect, 0, 0, 0,
             0, 1, 0, 0,
             0, 0, (f+n)/(f-n), 1,
             0, 0, (-2*f*n)/(f-n), 0
         ];
-
+        gl.canvas.width = w;
+        gl.canvas.height = h;
         gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
         gl.useProgram(shaderProgram);
         var uProjMatrix = gl.getUniformLocation(shaderProgram, 'projMatrix');
         gl.uniformMatrix4fv(uProjMatrix, false, new Float32Array(projMatrix));
-        var uMvMatrix = gl.getUniformLocation(shaderProgram, 'mvMatrix');
-        gl.uniformMatrix4fv(uMvMatrix, false, new Float32Array(mvMatrix));
-    }
-    invalidateCanvas();
+    };
+    invalidateCanvasSize();
+    $(window).on('resize', invalidateCanvasSize);
 
     function render(){
         gl.clearColor(0, 0, 0, 1);
