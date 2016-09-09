@@ -5,7 +5,7 @@ $(() => {
         model: {
             triangles: [
                 [0, 1, 2],
-                [1, 2, 3],
+                [2, 3, 0],
                 [0, 1, 4],
                 [1, 2, 4],
                 [2, 3, 4],
@@ -15,8 +15,8 @@ $(() => {
                 verts: [
                     [1/2, 0, 1/2],
                     [1/2, 0, -1/2],
-                    [-1/2, 0, 1/2],
                     [-1/2, 0, -1/2],
+                    [-1/2, 0, 1/2],
                     [0, 1, 0]
                 ]
             }]
@@ -99,10 +99,20 @@ $(() => {
         var aVertPos = gl.getAttribLocation(shaderProgram, 'aVertPos');
         gl.enableVertexAttribArray(aVertPos);
         gl.bindBuffer(gl.ARRAY_BUFFER, vertBuf);
-        var verts = beacon.model.frames[0].verts;
+        // wireframe:
+        var verts = [];
+        var frame = beacon.model.frames[0];
+        for (var tri of beacon.model.triangles) {
+            verts.push.apply(verts, frame.verts[tri[0]]);
+            verts.push.apply(verts, frame.verts[tri[1]]);
+            verts.push.apply(verts, frame.verts[tri[1]]);
+            verts.push.apply(verts, frame.verts[tri[2]]);
+            verts.push.apply(verts, frame.verts[tri[2]]);
+            verts.push.apply(verts, frame.verts[tri[0]]);
+        }
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(_.flatten(verts)), gl.STATIC_DRAW);
         gl.vertexAttribPointer(aVertPos, 3, gl.FLOAT, false, 0, 0);
-        gl.drawArrays(gl.POINTS, 0, verts.length);
+        gl.drawArrays(gl.LINES, 0, verts.length/3);
 
         window.requestAnimationFrame(render);
     }
