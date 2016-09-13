@@ -21,6 +21,19 @@ $(() => {
         }
     };
 
+    var camera = {
+        position: vec3.create(),
+        velocity: vec3.create()
+    };
+    Mousetrap.bind('w', () => camera.forward = true, 'keydown');
+    Mousetrap.bind('w', () => camera.forward = false, 'keyup');
+    Mousetrap.bind('s', () => camera.back = true, 'keydown');
+    Mousetrap.bind('s', () => camera.back = false, 'keyup');
+    Mousetrap.bind('a', () => camera.left = true, 'keydown');
+    Mousetrap.bind('a', () => camera.left = false, 'keyup');
+    Mousetrap.bind('d', () => camera.right = true, 'keydown');
+    Mousetrap.bind('d', () => camera.right = false, 'keyup');
+
     var gl = $('canvas')[0].getContext('webgl');
 
     var vertShader = gl.createShader(gl.VERTEX_SHADER);
@@ -53,13 +66,29 @@ $(() => {
     var vertBuf = gl.createBuffer();
 
     function tick(){
+        if (camera.forward)
+            vec3.add(camera.position, camera.position, [0, 0, 0.1]);
+        if (camera.back)
+            vec3.add(camera.position, camera.position, [0, 0, -0.1]);
+        if (camera.left)
+            vec3.add(camera.position, camera.position, [-0.1, 0, 0]);
+        if (camera.right)
+            vec3.add(camera.position, camera.position, [0.1, 0, 0]);
+        var worldCamMatrix = mat4.fromValues(
+            1, 0, 0, 0,
+            0, 1, 0, 0,
+            0, 0, 1, 0,
+            -camera.position[0], -camera.position[1], -camera.position[2], 1
+        );
         var t = (Date.now() % 8000) / 8000 * 2 * Math.PI;
-        var mvMatrix = [
+        var modelWorldMatrix = mat4.fromValues(
             Math.cos(t), 0, Math.sin(t), 0,
             0, 1, 0, 0,
             -Math.sin(t), 0, Math.cos(t), 0,
             0, -1/2, 2, 1
-        ];
+        );
+        var mvMatrix = mat4.create();
+        mat4.mul(mvMatrix, worldCamMatrix, modelWorldMatrix);
         gl.useProgram(shaderProgram);
         var uMvMatrix = gl.getUniformLocation(shaderProgram, 'mvMatrix');
         gl.uniformMatrix4fv(uMvMatrix, false, new Float32Array(mvMatrix));
