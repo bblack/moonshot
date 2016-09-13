@@ -23,7 +23,19 @@ $(() => {
 
     var camera = {
         position: vec3.create(),
-        velocity: vec3.create()
+        velocity: vec3.create(),
+        o: {yaw: 0},
+        heading: () => {
+            var v = vec3.fromValues(0, 0, 1);
+            var yawMatrix = mat3.fromValues(
+                Math.cos(camera.o.yaw), 0, Math.sin(camera.o.yaw),
+                0, 1, 0,
+                -Math.sin(camera.o.yaw), 0, Math.cos(camera.o.yaw)
+            );
+            var speed = 0.1;
+            vec3.transformMat3(v, v, yawMatrix);
+            return vec3.scale(v, v, speed);
+        }
     };
     Mousetrap.bind('w', () => camera.forward = true, 'keydown');
     Mousetrap.bind('w', () => camera.forward = false, 'keyup');
@@ -33,6 +45,10 @@ $(() => {
     Mousetrap.bind('a', () => camera.left = false, 'keyup');
     Mousetrap.bind('d', () => camera.right = true, 'keydown');
     Mousetrap.bind('d', () => camera.right = false, 'keyup');
+    Mousetrap.bind('left', () => camera.turnleft = true, 'keydown');
+    Mousetrap.bind('left', () => camera.turnleft = false, 'keyup');
+    Mousetrap.bind('right', () => camera.turnright = true, 'keydown');
+    Mousetrap.bind('right', () => camera.turnright = false, 'keyup');
 
     var gl = $('canvas')[0].getContext('webgl');
 
@@ -67,19 +83,32 @@ $(() => {
 
     function tick(){
         if (camera.forward)
-            vec3.add(camera.position, camera.position, [0, 0, 0.1]);
+            vec3.add(camera.position, camera.position, camera.heading());
         if (camera.back)
-            vec3.add(camera.position, camera.position, [0, 0, -0.1]);
-        if (camera.left)
-            vec3.add(camera.position, camera.position, [-0.1, 0, 0]);
-        if (camera.right)
-            vec3.add(camera.position, camera.position, [0.1, 0, 0]);
-        var worldCamMatrix = mat4.fromValues(
+            vec3.subtract(camera.position, camera.position, camera.heading());
+        // TODO: Determine 'up' so we can find the 'right' and 'left' vectors
+        // if (camera.left)
+        //     vec3.add(camera.position, camera.position, [-0.1, 0, 0]);
+        // if (camera.right)
+        //     vec3.add(camera.position, camera.position, [0.1, 0, 0]);
+        if (camera.turnleft)
+            camera.o.yaw += 0.05;
+        if (camera.turnright)
+            camera.o.yaw -= 0.05;
+        var worldCamTranslateMatrix = mat4.fromValues(
             1, 0, 0, 0,
             0, 1, 0, 0,
             0, 0, 1, 0,
             -camera.position[0], -camera.position[1], -camera.position[2], 1
         );
+        var worldCamYawMatrix = mat4.fromValues(
+            Math.cos(-camera.o.yaw), 0, Math.sin(-camera.o.yaw), 0,
+            0, 1, 0, 0,
+            -Math.sin(-camera.o.yaw), 0, Math.cos(-camera.o.yaw), 0,
+            0, 0, 0, 1
+        );
+        var worldCamMatrix = mat4.create();
+        mat4.mul(worldCamMatrix, worldCamYawMatrix, worldCamTranslateMatrix);
         var t = (Date.now() % 8000) / 8000 * 2 * Math.PI;
         var modelWorldMatrix = mat4.fromValues(
             Math.cos(t), 0, Math.sin(t), 0,
