@@ -1,6 +1,4 @@
 $(() => {
-    $('h1').text('sensors activated')
-
     var beacon = {
         model: {
             triangles: [
@@ -55,7 +53,7 @@ $(() => {
     var vertBuf = gl.createBuffer();
 
     function tick(){
-        var t = (Date.now() % 2000) / 2000 * 2 * Math.PI;
+        var t = (Date.now() % 8000) / 8000 * 2 * Math.PI;
         var mvMatrix = [
             Math.cos(t), 0, Math.sin(t), 0,
             0, 1, 0, 0,
