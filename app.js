@@ -130,7 +130,7 @@ $(() => {
         var h = $(gl.canvas).height();
         var aspect = w/h;
         var f = 1000;
-        var n = 1;
+        var n = 0.1;
         var projMatrix = [
             1/aspect, 0, 0, 0,
             0, 1, 0, 0,
