@@ -24,7 +24,7 @@ $(() => {
     var camera = {
         position: vec3.create(),
         velocity: vec3.create(),
-        o: {yaw: 0}
+        o: {yaw: 0, pitch: 0}
     };
     Mousetrap.bind('w', () => camera.forward = true, 'keydown');
     Mousetrap.bind('w', () => camera.forward = false, 'keyup');
@@ -38,6 +38,10 @@ $(() => {
     Mousetrap.bind('left', () => camera.turnleft = false, 'keyup');
     Mousetrap.bind('right', () => camera.turnright = true, 'keydown');
     Mousetrap.bind('right', () => camera.turnright = false, 'keyup');
+    Mousetrap.bind('up', () => camera.pitchdown = true, 'keydown');
+    Mousetrap.bind('up', () => camera.pitchdown = false, 'keyup');
+    Mousetrap.bind('down', () => camera.pitchup = true, 'keydown');
+    Mousetrap.bind('down', () => camera.pitchup = false, 'keyup');
 
     var gl = $('canvas')[0].getContext('webgl');
 
@@ -88,6 +92,10 @@ $(() => {
             camera.o.yaw += 0.05;
         if (camera.turnright)
             camera.o.yaw -= 0.05;
+        if (camera.pitchup)
+            camera.o.pitch += 0.05;
+        if (camera.pitchdown)
+            camera.o.pitch -= 0.05;
         var worldCamTranslateMatrix = mat4.fromValues(
             1, 0, 0, 0,
             0, 1, 0, 0,
@@ -100,7 +108,15 @@ $(() => {
             -Math.sin(-camera.o.yaw), 0, Math.cos(-camera.o.yaw), 0,
             0, 0, 0, 1
         );
-        mat4.mul(worldCamMatrix, worldCamYawMatrix, worldCamTranslateMatrix);
+        var worldCamPitchMatrix = mat4.fromValues(
+            1, 0, 0, 0,
+            0, Math.cos(-camera.o.pitch), -Math.sin(-camera.o.pitch), 0,
+            0, Math.sin(-camera.o.pitch), Math.cos(-camera.o.pitch), 0,
+            0, 0, 0, 1
+        );
+        var worldCamRotMatrix = mat4.create();
+        mat4.mul(worldCamRotMatrix, worldCamPitchMatrix, worldCamYawMatrix);
+        mat4.mul(worldCamMatrix, worldCamRotMatrix, worldCamTranslateMatrix);
         mat4.invert(camWorldMatrix, worldCamMatrix);
         var t = (Date.now() % 8000) / 8000 * 2 * Math.PI;
         var modelWorldMatrix = mat4.fromValues(
