@@ -24,7 +24,7 @@ $(() => {
     var camera = {
         position: vec3.create(),
         velocity: vec3.create(),
-        o: {yaw: 0, pitch: 0}
+        o: {yaw: 0, pitch: 0, roll: 0}
     };
     Mousetrap.bind('w', () => camera.forward = true, 'keydown');
     Mousetrap.bind('w', () => camera.forward = false, 'keyup');
@@ -42,6 +42,10 @@ $(() => {
     Mousetrap.bind('up', () => camera.pitchdown = false, 'keyup');
     Mousetrap.bind('down', () => camera.pitchup = true, 'keydown');
     Mousetrap.bind('down', () => camera.pitchup = false, 'keyup');
+    Mousetrap.bind('q', () => camera.rollleft = true, 'keydown');
+    Mousetrap.bind('q', () => camera.rollleft = false, 'keyup');
+    Mousetrap.bind('e', () => camera.rollright = true, 'keydown');
+    Mousetrap.bind('e', () => camera.rollright = false, 'keyup');
 
     var gl = $('canvas')[0].getContext('webgl');
 
@@ -96,6 +100,10 @@ $(() => {
             camera.o.pitch += 0.05;
         if (camera.pitchdown)
             camera.o.pitch -= 0.05;
+        if (camera.rollleft)
+            camera.o.roll += 0.05;
+        if (camera.rollright)
+            camera.o.roll -= 0.05;
         var worldCamTranslateMatrix = mat4.fromValues(
             1, 0, 0, 0,
             0, 1, 0, 0,
@@ -114,9 +122,30 @@ $(() => {
             0, Math.sin(-camera.o.pitch), Math.cos(-camera.o.pitch), 0,
             0, 0, 0, 1
         );
-        var worldCamRotMatrix = mat4.create();
-        mat4.mul(worldCamRotMatrix, worldCamPitchMatrix, worldCamYawMatrix);
-        mat4.mul(worldCamMatrix, worldCamRotMatrix, worldCamTranslateMatrix);
+        var worldCamRollMatrix = mat4.fromValues(
+            Math.cos(-camera.o.roll), Math.sin(-camera.o.roll), 0, 0,
+            -Math.sin(-camera.o.roll), Math.cos(-camera.o.roll), 0, 0,
+            0, 0, 1, 0,
+            0, 0, 0, 1
+        );
+        // TODO: make these rotations start from the camera orientation.
+        // currently we're starting from world space here! i.e. pitch
+        // will always be relative to the same world-space axis. since roll is
+        // the last op, it will be relative to the space after the other two
+        // transformations and will therefore feel correct.
+        mat4.mul(
+            worldCamMatrix,
+            mat4.mul(
+                mat4.create(),
+                worldCamRollMatrix,
+                mat4.mul(
+                    mat4.create(),
+                    worldCamPitchMatrix,
+                    worldCamYawMatrix
+                )
+            ),
+            worldCamTranslateMatrix
+        );
         mat4.invert(camWorldMatrix, worldCamMatrix);
         var t = (Date.now() % 8000) / 8000 * 2 * Math.PI;
         var modelWorldMatrix = mat4.fromValues(
