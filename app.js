@@ -24,7 +24,7 @@ $(() => {
     var camera = {
         position: vec3.create(),
         velocity: vec3.create(),
-        o: {yaw: 0, pitch: 0, roll: 0}
+        o: quat.create()
     };
     Mousetrap.bind('w', () => camera.forward = true, 'keydown');
     Mousetrap.bind('w', () => camera.forward = false, 'keyup');
@@ -84,6 +84,7 @@ $(() => {
         var camWorldScaleMatrix = mat3.fromMat4(mat3.create(), camWorldMatrix); // discard translation
         var fwd = vec3.transformMat3(vec3.create(), [0, 0, 0.1],  camWorldScaleMatrix);
         var left = vec3.transformMat3(vec3.create(), [-0.1, 0, 0], camWorldScaleMatrix);
+        var rot = quat.create();
         if (camera.forward)
             vec3.add(camera.position, camera.position, fwd);
         if (camera.back)
@@ -93,59 +94,26 @@ $(() => {
         if (camera.right)
             vec3.subtract(camera.position, camera.position, left);
         if (camera.turnleft)
-            camera.o.yaw += 0.05;
+            quat.rotateY(rot, rot, 0.05);
         if (camera.turnright)
-            camera.o.yaw -= 0.05;
+            quat.rotateY(rot, rot, -0.05);
         if (camera.pitchup)
-            camera.o.pitch += 0.05;
+            quat.rotateX(rot, rot, 0.05);
         if (camera.pitchdown)
-            camera.o.pitch -= 0.05;
+            quat.rotateX(rot, rot, -0.05);
         if (camera.rollleft)
-            camera.o.roll += 0.05;
+            quat.rotateZ(rot, rot, 0.05);
         if (camera.rollright)
-            camera.o.roll -= 0.05;
+            quat.rotateZ(rot, rot, -0.05);
+        quat.mul(camera.o, rot, camera.o);
         var worldCamTranslateMatrix = mat4.fromValues(
             1, 0, 0, 0,
             0, 1, 0, 0,
             0, 0, 1, 0,
             -camera.position[0], -camera.position[1], -camera.position[2], 1
         );
-        var worldCamYawMatrix = mat4.fromValues(
-            Math.cos(-camera.o.yaw), 0, Math.sin(-camera.o.yaw), 0,
-            0, 1, 0, 0,
-            -Math.sin(-camera.o.yaw), 0, Math.cos(-camera.o.yaw), 0,
-            0, 0, 0, 1
-        );
-        var worldCamPitchMatrix = mat4.fromValues(
-            1, 0, 0, 0,
-            0, Math.cos(-camera.o.pitch), -Math.sin(-camera.o.pitch), 0,
-            0, Math.sin(-camera.o.pitch), Math.cos(-camera.o.pitch), 0,
-            0, 0, 0, 1
-        );
-        var worldCamRollMatrix = mat4.fromValues(
-            Math.cos(-camera.o.roll), Math.sin(-camera.o.roll), 0, 0,
-            -Math.sin(-camera.o.roll), Math.cos(-camera.o.roll), 0, 0,
-            0, 0, 1, 0,
-            0, 0, 0, 1
-        );
-        // TODO: make these rotations start from the camera orientation.
-        // currently we're starting from world space here! i.e. pitch
-        // will always be relative to the same world-space axis. since roll is
-        // the last op, it will be relative to the space after the other two
-        // transformations and will therefore feel correct.
-        mat4.mul(
-            worldCamMatrix,
-            mat4.mul(
-                mat4.create(),
-                worldCamRollMatrix,
-                mat4.mul(
-                    mat4.create(),
-                    worldCamPitchMatrix,
-                    worldCamYawMatrix
-                )
-            ),
-            worldCamTranslateMatrix
-        );
+        var rotMatrix = mat4.fromQuat(mat4.create(), camera.o);
+        mat4.mul(worldCamMatrix, rotMatrix, worldCamTranslateMatrix);
         mat4.invert(camWorldMatrix, worldCamMatrix);
         var t = (Date.now() % 8000) / 8000 * 2 * Math.PI;
         var modelWorldMatrix = mat4.fromValues(
