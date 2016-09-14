@@ -102,9 +102,9 @@ $(() => {
         if (camera.pitchdown)
             quat.rotateX(rot, rot, -0.05);
         if (camera.rollleft)
-            quat.rotateZ(rot, rot, 0.05);
-        if (camera.rollright)
             quat.rotateZ(rot, rot, -0.05);
+        if (camera.rollright)
+            quat.rotateZ(rot, rot, 0.05);
         quat.mul(camera.o, rot, camera.o);
         var worldCamTranslateMatrix = mat4.fromValues(
             1, 0, 0, 0,
