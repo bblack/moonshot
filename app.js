@@ -81,16 +81,21 @@ $(() => {
 
     var vertBuf = gl.createBuffer();
 
+    var worldCamMatrix = mat4.create();
+    var camWorldMatrix = mat4.create();
     function tick(){
+        var fwd = vec3.transformMat4(vec3.create(), vec3.fromValues(0, 0, 0.1),
+            camWorldMatrix);
+        var left = vec3.transformMat4(vec3.create(), vec3.fromValues(-0.1, 0, 0),
+            camWorldMatrix);
         if (camera.forward)
-            vec3.add(camera.position, camera.position, camera.heading());
+            vec3.add(camera.position, camera.position, fwd);
         if (camera.back)
-            vec3.subtract(camera.position, camera.position, camera.heading());
-        // TODO: Determine 'up' so we can find the 'right' and 'left' vectors
-        // if (camera.left)
-        //     vec3.add(camera.position, camera.position, [-0.1, 0, 0]);
-        // if (camera.right)
-        //     vec3.add(camera.position, camera.position, [0.1, 0, 0]);
+            vec3.subtract(camera.position, camera.position, fwd);
+        if (camera.left)
+            vec3.add(camera.position, camera.position, left);
+        if (camera.right)
+            vec3.subtract(camera.position, camera.position, left);
         if (camera.turnleft)
             camera.o.yaw += 0.05;
         if (camera.turnright)
@@ -107,8 +112,9 @@ $(() => {
             -Math.sin(-camera.o.yaw), 0, Math.cos(-camera.o.yaw), 0,
             0, 0, 0, 1
         );
-        var worldCamMatrix = mat4.create();
         mat4.mul(worldCamMatrix, worldCamYawMatrix, worldCamTranslateMatrix);
+        mat4.invert(camWorldMatrix, worldCamMatrix);
+        camWorldMatrix.fill(0, 12, 16);
         var t = (Date.now() % 8000) / 8000 * 2 * Math.PI;
         var modelWorldMatrix = mat4.fromValues(
             Math.cos(t), 0, Math.sin(t), 0,
