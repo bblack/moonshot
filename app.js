@@ -24,18 +24,7 @@ $(() => {
     var camera = {
         position: vec3.create(),
         velocity: vec3.create(),
-        o: {yaw: 0},
-        heading: () => {
-            var v = vec3.fromValues(0, 0, 1);
-            var yawMatrix = mat3.fromValues(
-                Math.cos(camera.o.yaw), 0, Math.sin(camera.o.yaw),
-                0, 1, 0,
-                -Math.sin(camera.o.yaw), 0, Math.cos(camera.o.yaw)
-            );
-            var speed = 0.1;
-            vec3.transformMat3(v, v, yawMatrix);
-            return vec3.scale(v, v, speed);
-        }
+        o: {yaw: 0}
     };
     Mousetrap.bind('w', () => camera.forward = true, 'keydown');
     Mousetrap.bind('w', () => camera.forward = false, 'keyup');
