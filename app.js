@@ -27,7 +27,9 @@ $(() => {
                 return id;
             })(),
             wire: true
-        }
+        },
+        o: quat.create(),
+        rot: quat.rotateY(quat.create(), quat.create(), Math.PI / 8)
     };
     var skybox = {
         model: {
@@ -166,7 +168,10 @@ $(() => {
     var camWorldMatrix = mat4.create();
     var rotMatrix = mat4.create();
     var mvMatrix = mat4.create();
+    var lastTick;
     function tick(){
+        var sinceLastTick = Date.now() - lastTick;
+        lastTick = Date.now();
         var camWorldScaleMatrix = mat3.fromMat4(mat3.create(), camWorldMatrix); // discard translation
         var fwd = vec3.transformMat3(vec3.create(), [0, 0, 0.1],  camWorldScaleMatrix);
         var left = vec3.transformMat3(vec3.create(), [-0.1, 0, 0], camWorldScaleMatrix);
@@ -222,7 +227,12 @@ $(() => {
         var modelWorldMatrix = mat4.create();
         mvMatrix = mat4.create();
         mat4.mul(mvMatrix, worldCamMatrix, modelWorldMatrix);
-        gl.useProgram(shaderProgram);
+        for (var ent of entities) {
+            if (ent.rot && sinceLastTick) {
+                quat.slerp(ent.o, ent.o, quat.mul(quat.create(), ent.rot, ent.o), sinceLastTick/1000);
+                // TODO: normalize to prevent drift?
+            }
+        }
         window.requestAnimationFrame(tick);
     }
     tick();
@@ -270,7 +280,9 @@ $(() => {
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(texCoords), gl.STATIC_DRAW);
         gl.vertexAttribPointer(aTexCoord, 2, gl.FLOAT, false, 0, 0);
         var uMvMatrix = gl.getUniformLocation(shaderProgram, 'mvMatrix');
-        gl.uniformMatrix4fv(uMvMatrix, false, new Float32Array(ent.skybox ? rotMatrix : mvMatrix));
+        var entMvMatrix = ent.skybox ? rotMatrix :
+            mat4.mul(mat4.create(), mvMatrix, mat4.fromQuat(mat4.create(), ent.o));
+        gl.uniformMatrix4fv(uMvMatrix, false, new Float32Array(entMvMatrix));
         gl.bindTexture(gl.TEXTURE_2D, ent.model.glTexture);
         ent.model.wire ?
             gl.drawArrays(gl.LINES, 0, ent.model.triangles.length*6) :
