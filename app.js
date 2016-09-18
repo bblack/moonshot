@@ -29,7 +29,8 @@ $(() => {
             wire: true
         },
         o: quat.create(),
-        rot: quat.rotateY(quat.create(), quat.create(), Math.PI / 8)
+        rot: quat.rotateY(quat.create(), quat.create(), Math.PI / 8),
+        pos: vec3.fromValues(0, 0, 10)
     };
     var skybox = {
         model: {
@@ -277,7 +278,7 @@ $(() => {
         gl.vertexAttribPointer(aTexCoord, 2, gl.FLOAT, false, 0, 0);
         var uMvMatrix = gl.getUniformLocation(shaderProgram, 'mvMatrix');
         var entMvMatrix = ent.skybox ? rotMatrix :
-            mat4.mul(mat4.create(), worldCamMatrix, mat4.fromQuat(mat4.create(), ent.o));
+            mat4.mul(mat4.create(), worldCamMatrix, mat4.fromRotationTranslation(mat4.create(), ent.o, ent.pos));
         gl.uniformMatrix4fv(uMvMatrix, false, new Float32Array(entMvMatrix));
         gl.bindTexture(gl.TEXTURE_2D, ent.model.glTexture);
         ent.model.wire ?
