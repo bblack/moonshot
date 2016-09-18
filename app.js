@@ -167,7 +167,6 @@ $(() => {
     var worldCamMatrix = mat4.create();
     var camWorldMatrix = mat4.create();
     var rotMatrix = mat4.create();
-    var mvMatrix = mat4.create();
     var lastTick;
     function tick(){
         var sinceLastTick = Date.now() - lastTick;
@@ -224,9 +223,6 @@ $(() => {
         rotMatrix = mat4.fromQuat(mat4.create(), camera.o);
         mat4.mul(worldCamMatrix, rotMatrix, worldCamTranslateMatrix);
         mat4.invert(camWorldMatrix, worldCamMatrix);
-        var modelWorldMatrix = mat4.create();
-        mvMatrix = mat4.create();
-        mat4.mul(mvMatrix, worldCamMatrix, modelWorldMatrix);
         for (var ent of entities) {
             if (ent.rot && sinceLastTick) {
                 quat.slerp(ent.o, ent.o, quat.mul(quat.create(), ent.rot, ent.o), sinceLastTick/1000);
@@ -281,7 +277,7 @@ $(() => {
         gl.vertexAttribPointer(aTexCoord, 2, gl.FLOAT, false, 0, 0);
         var uMvMatrix = gl.getUniformLocation(shaderProgram, 'mvMatrix');
         var entMvMatrix = ent.skybox ? rotMatrix :
-            mat4.mul(mat4.create(), mvMatrix, mat4.fromQuat(mat4.create(), ent.o));
+            mat4.mul(mat4.create(), worldCamMatrix, mat4.fromQuat(mat4.create(), ent.o));
         gl.uniformMatrix4fv(uMvMatrix, false, new Float32Array(entMvMatrix));
         gl.bindTexture(gl.TEXTURE_2D, ent.model.glTexture);
         ent.model.wire ?
