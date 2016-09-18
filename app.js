@@ -17,9 +17,66 @@ $(() => {
                     [-1/2, 0, 1/2],
                     [0, 1, 0]
                 ]
-            }]
+            }],
+            texture: (function(){
+                var id = new ImageData(256, 256);
+                id.data.fill(0xff);
+                for (var i=0; i<id.data.length; i+=4) {
+                    id.data.fill(0x00, i+2, i+3);
+                }
+                return id;
+            })()
         }
     };
+    var skybox = {
+        model: {
+            triangles: [
+                [0, 1, 3],
+                [1, 2, 3],
+                [1, 5, 2],
+                [5, 6, 2],
+                [2, 6, 3],
+                [3, 6, 7],
+                [0, 3, 7],
+                [0, 7, 4],
+                [0, 4, 5],
+                [1, 0, 5],
+                [4, 5, 6],
+                [6, 7, 4]
+            ],
+            frames: [{
+                verts: [
+                    [-1, 1, 1],
+                    [1, 1, 1],
+                    [1, 1, -1],
+                    [-1, 1, -1],
+                    [-1, -1, 1],
+                    [1, -1, 1],
+                    [1, -1, -1],
+                    [-1, -1, -1],
+                ]
+            }],
+            texture: (function(){
+                var id = new ImageData(1024, 1024);
+                id.data.fill(0xff);
+                for (var i=0; i<id.data.length; i+=4) {
+                    if (Math.random() > 0.001)
+                        id.data.fill(0x00, i, i+3);
+                }
+                return id;
+            })()
+        },
+        skybox: true
+    };
+    _.each(skybox.model.frames[0].verts, (v) => {
+        // TODO: instead of choosing some big number less than the distance to the far frustum plane, have a special projection matrix for skyboxes that always gives max Z
+        var n = 500;
+        v[0] *= n;
+        v[1] *= n;
+        v[2] *= n;
+    })
+
+    var entities = [beacon, skybox];
 
     var camera = {
         position: vec3.create(),
@@ -48,14 +105,27 @@ $(() => {
     Mousetrap.bind('e', () => camera.rollright = false, 'keyup');
 
     var gl = $('canvas')[0].getContext('webgl');
+    gl.enable(gl.DEPTH_TEST);
+
+    for (var ent of entities) {
+        ent.model.glTexture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, ent.model.glTexture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, ent.model.texture);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+    }
 
     var vertShader = gl.createShader(gl.VERTEX_SHADER);
     gl.shaderSource(vertShader, `
         attribute vec3 aVertPos;
+        attribute vec2 aTexCoord;
         uniform mat4 projMatrix;
         uniform mat4 mvMatrix;
+        varying highp vec2 vTexCoord;
         void main(void){
             gl_Position = projMatrix * mvMatrix * vec4(aVertPos, 1.0);
+            vTexCoord = aTexCoord;
             gl_PointSize = 7.0;
         }
     `);
@@ -64,8 +134,10 @@ $(() => {
         throw new Error(gl.getShaderInfoLog(vertShader));
     var fragShader = gl.createShader(gl.FRAGMENT_SHADER);
     gl.shaderSource(fragShader, `
+        varying highp vec2 vTexCoord;
+        uniform sampler2D uSampler;
         void main(void){
-            gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+            gl_FragColor = texture2D(uSampler, vec2(vTexCoord.st));
         }
     `);
     gl.compileShader(fragShader);
@@ -80,6 +152,8 @@ $(() => {
 
     var worldCamMatrix = mat4.create();
     var camWorldMatrix = mat4.create();
+    var rotMatrix = mat4.create();
+    var mvMatrix = mat4.create();
     function tick(){
         var camWorldScaleMatrix = mat3.fromMat4(mat3.create(), camWorldMatrix); // discard translation
         var fwd = vec3.transformMat3(vec3.create(), [0, 0, 0.1],  camWorldScaleMatrix);
@@ -112,21 +186,13 @@ $(() => {
             0, 0, 1, 0,
             -camera.position[0], -camera.position[1], -camera.position[2], 1
         );
-        var rotMatrix = mat4.fromQuat(mat4.create(), camera.o);
+        rotMatrix = mat4.fromQuat(mat4.create(), camera.o);
         mat4.mul(worldCamMatrix, rotMatrix, worldCamTranslateMatrix);
         mat4.invert(camWorldMatrix, worldCamMatrix);
-        var t = (Date.now() % 8000) / 8000 * 2 * Math.PI;
-        var modelWorldMatrix = mat4.fromValues(
-            Math.cos(t), 0, Math.sin(t), 0,
-            0, 1, 0, 0,
-            -Math.sin(t), 0, Math.cos(t), 0,
-            0, -1/2, 2, 1
-        );
-        var mvMatrix = mat4.create();
+        var modelWorldMatrix = mat4.create();
+        mvMatrix = mat4.create();
         mat4.mul(mvMatrix, worldCamMatrix, modelWorldMatrix);
         gl.useProgram(shaderProgram);
-        var uMvMatrix = gl.getUniformLocation(shaderProgram, 'mvMatrix');
-        gl.uniformMatrix4fv(uMvMatrix, false, new Float32Array(mvMatrix));
         window.requestAnimationFrame(tick);
     }
     tick();
@@ -153,28 +219,42 @@ $(() => {
     invalidateCanvasSize();
     $(window).on('resize', invalidateCanvasSize);
 
+    var vertTexCoordsBuf = gl.createBuffer();
+
+    function drawEntity(ent, aVertPos, aTexCoord){
+        var verts = [];
+        var texCoords = [];
+        var frame = ent.model.frames[0];
+        for (var tri of ent.model.triangles) {
+            verts.push.apply(verts, frame.verts[tri[0]]);
+            verts.push.apply(verts, frame.verts[tri[1]]);
+            verts.push.apply(verts, frame.verts[tri[2]]);
+            texCoords.push(0, 0, 1, 0, 0, 1);
+        }
+        gl.bindBuffer(gl.ARRAY_BUFFER, vertBuf);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(_.flatten(verts)), gl.STATIC_DRAW);
+        gl.vertexAttribPointer(aVertPos, 3, gl.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, vertTexCoordsBuf);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(texCoords), gl.STATIC_DRAW);
+        gl.vertexAttribPointer(aTexCoord, 2, gl.FLOAT, false, 0, 0);
+        var uMvMatrix = gl.getUniformLocation(shaderProgram, 'mvMatrix');
+        gl.uniformMatrix4fv(uMvMatrix, false, new Float32Array(ent.skybox ? rotMatrix : mvMatrix));
+        gl.bindTexture(gl.TEXTURE_2D, ent.model.glTexture);
+        gl.drawArrays(gl.TRIANGLES, 0, ent.model.triangles.length*3);
+    }
+
     function render(){
-        gl.clearColor(0, 0, 0, 1);
+        gl.clearColor(1, 1, 1, 1);
         gl.clear(gl.COLOR_BUFFER_BIT);
 
         gl.useProgram(shaderProgram);
         var aVertPos = gl.getAttribLocation(shaderProgram, 'aVertPos');
         gl.enableVertexAttribArray(aVertPos);
-        gl.bindBuffer(gl.ARRAY_BUFFER, vertBuf);
-        // wireframe:
-        var verts = [];
-        var frame = beacon.model.frames[0];
-        for (var tri of beacon.model.triangles) {
-            verts.push.apply(verts, frame.verts[tri[0]]);
-            verts.push.apply(verts, frame.verts[tri[1]]);
-            verts.push.apply(verts, frame.verts[tri[1]]);
-            verts.push.apply(verts, frame.verts[tri[2]]);
-            verts.push.apply(verts, frame.verts[tri[2]]);
-            verts.push.apply(verts, frame.verts[tri[0]]);
+        var aTexCoord = gl.getAttribLocation(shaderProgram, 'aTexCoord');
+        gl.enableVertexAttribArray(aTexCoord);
+        for (ent of entities) {
+            drawEntity(ent, aVertPos, aTexCoord);
         }
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(_.flatten(verts)), gl.STATIC_DRAW);
-        gl.vertexAttribPointer(aVertPos, 3, gl.FLOAT, false, 0, 0);
-        gl.drawArrays(gl.LINES, 0, verts.length/3);
 
         window.requestAnimationFrame(render);
     }
