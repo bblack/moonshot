@@ -84,26 +84,37 @@ $(() => {
         velocity: vec3.create(),
         o: quat.create()
     };
-    Mousetrap.bind('w', () => camera.forward = true, 'keydown');
-    Mousetrap.bind('w', () => camera.forward = false, 'keyup');
-    Mousetrap.bind('s', () => camera.back = true, 'keydown');
-    Mousetrap.bind('s', () => camera.back = false, 'keyup');
-    Mousetrap.bind('a', () => camera.left = true, 'keydown');
-    Mousetrap.bind('a', () => camera.left = false, 'keyup');
-    Mousetrap.bind('d', () => camera.right = true, 'keydown');
-    Mousetrap.bind('d', () => camera.right = false, 'keyup');
-    Mousetrap.bind('left', () => camera.turnleft = true, 'keydown');
-    Mousetrap.bind('left', () => camera.turnleft = false, 'keyup');
-    Mousetrap.bind('right', () => camera.turnright = true, 'keydown');
-    Mousetrap.bind('right', () => camera.turnright = false, 'keyup');
-    Mousetrap.bind('up', () => camera.pitchdown = true, 'keydown');
-    Mousetrap.bind('up', () => camera.pitchdown = false, 'keyup');
-    Mousetrap.bind('down', () => camera.pitchup = true, 'keydown');
-    Mousetrap.bind('down', () => camera.pitchup = false, 'keyup');
-    Mousetrap.bind('q', () => camera.rollleft = true, 'keydown');
-    Mousetrap.bind('q', () => camera.rollleft = false, 'keyup');
-    Mousetrap.bind('e', () => camera.rollright = true, 'keydown');
-    Mousetrap.bind('e', () => camera.rollright = false, 'keyup');
+    var inputState = {};
+    Mousetrap.bind('w', () => inputState.forward = true, 'keydown');
+    Mousetrap.bind('w', () => inputState.forward = false, 'keyup');
+    Mousetrap.bind('s', () => inputState.back = true, 'keydown');
+    Mousetrap.bind('s', () => inputState.back = false, 'keyup');
+    Mousetrap.bind('a', () => inputState.left = true, 'keydown');
+    Mousetrap.bind('a', () => inputState.left = false, 'keyup');
+    Mousetrap.bind('d', () => inputState.right = true, 'keydown');
+    Mousetrap.bind('d', () => inputState.right = false, 'keyup');
+    Mousetrap.bind('left', () => inputState.turnleft = true, 'keydown');
+    Mousetrap.bind('left', () => inputState.turnleft = false, 'keyup');
+    Mousetrap.bind('right', () => inputState.turnright = true, 'keydown');
+    Mousetrap.bind('right', () => inputState.turnright = false, 'keyup');
+    Mousetrap.bind('up', () => inputState.pitchdown = true, 'keydown');
+    Mousetrap.bind('up', () => inputState.pitchdown = false, 'keyup');
+    Mousetrap.bind('down', () => inputState.pitchup = true, 'keydown');
+    Mousetrap.bind('down', () => inputState.pitchup = false, 'keyup');
+    Mousetrap.bind('q', () => inputState.rollleft = true, 'keydown');
+    Mousetrap.bind('q', () => inputState.rollleft = false, 'keyup');
+    Mousetrap.bind('e', () => inputState.rollright = true, 'keydown');
+    Mousetrap.bind('e', () => inputState.rollright = false, 'keyup');
+
+    window.addEventListener('gamepadconnected', (evt) => {
+        console.log('gamepad: ' + evt.gamepad.id);
+        function pollButtons(){
+            console.log(evt.gamepad.buttons)
+            // window.requestAnimationFrame(pollButtons);
+            setTimeout(pollButtons, 500);
+        }
+        // pollButtons();
+    })
 
     var gl = $('canvas')[0].getContext('webgl');
     gl.enable(gl.DEPTH_TEST);
@@ -160,26 +171,44 @@ $(() => {
         var fwd = vec3.transformMat3(vec3.create(), [0, 0, 0.1],  camWorldScaleMatrix);
         var left = vec3.transformMat3(vec3.create(), [-0.1, 0, 0], camWorldScaleMatrix);
         var rot = quat.create();
-        if (camera.forward)
+        if (inputState.forward)
             vec3.add(camera.position, camera.position, fwd);
-        if (camera.back)
+        if (inputState.back)
             vec3.subtract(camera.position, camera.position, fwd);
-        if (camera.left)
+        if (inputState.left)
             vec3.add(camera.position, camera.position, left);
-        if (camera.right)
+        if (inputState.right)
             vec3.subtract(camera.position, camera.position, left);
-        if (camera.turnleft)
+        if (inputState.turnleft)
             quat.rotateY(rot, rot, 0.05);
-        if (camera.turnright)
+        if (inputState.turnright)
             quat.rotateY(rot, rot, -0.05);
-        if (camera.pitchup)
+        if (inputState.pitchup)
             quat.rotateX(rot, rot, 0.05);
-        if (camera.pitchdown)
+        if (inputState.pitchdown)
             quat.rotateX(rot, rot, -0.05);
-        if (camera.rollleft)
+        if (inputState.rollleft)
             quat.rotateZ(rot, rot, -0.05);
-        if (camera.rollright)
+        if (inputState.rollright)
             quat.rotateZ(rot, rot, 0.05);
+        var gamepad = navigator.getGamepads()[0];
+        if (gamepad) {
+            // TODO: clean this up. put it in a separate function, that is invoked by animation frames, and have it affect inputState like keyboard, so that among other things, it won't allow the player to double up on speed. also dry up the notion (and value) of threshold.
+            if (Math.abs(gamepad.axes[0]) > 0.05)
+                vec3.subtract(camera.position, camera.position,
+                    vec3.scale(vec3.create(), left, gamepad.axes[0]));
+            if (Math.abs(gamepad.axes[1]) > 0.05)
+                vec3.subtract(camera.position, camera.position,
+                    vec3.scale(vec3.create(), fwd, gamepad.axes[1]));
+            if (Math.abs(gamepad.axes[3]) > 0.05)
+                quat.rotateY(rot, rot, -0.05 * gamepad.axes[3]);
+            if (Math.abs(gamepad.axes[4]) > 0.05)
+                quat.rotateX(rot, rot, 0.05 * gamepad.axes[4]);
+            if (gamepad.buttons[4].pressed)
+                quat.rotateZ(rot, rot, -0.05);
+            if (gamepad.buttons[5].pressed)
+                quat.rotateZ(rot, rot, 0.05);
+        }
         quat.mul(camera.o, rot, camera.o);
         var worldCamTranslateMatrix = mat4.fromValues(
             1, 0, 0, 0,
