@@ -194,15 +194,15 @@ $(() => {
         var gamepad = navigator.getGamepads()[0];
         if (gamepad) {
             // TODO: clean this up. put it in a separate function, that is invoked by animation frames, and have it affect inputState like keyboard, so that among other things, it won't allow the player to double up on speed. also dry up the notion (and value) of threshold.
-            if (Math.abs(gamepad.axes[0]) > 0.05)
+            if (Math.abs(gamepad.axes[0]) > 0.1)
                 vec3.subtract(camera.position, camera.position,
                     vec3.scale(vec3.create(), left, gamepad.axes[0]));
-            if (Math.abs(gamepad.axes[1]) > 0.05)
+            if (Math.abs(gamepad.axes[1]) > 0.1)
                 vec3.subtract(camera.position, camera.position,
                     vec3.scale(vec3.create(), fwd, gamepad.axes[1]));
-            if (Math.abs(gamepad.axes[3]) > 0.05)
+            if (Math.abs(gamepad.axes[3]) > 0.1)
                 quat.rotateY(rot, rot, -0.05 * gamepad.axes[3]);
-            if (Math.abs(gamepad.axes[4]) > 0.05)
+            if (Math.abs(gamepad.axes[4]) > 0.1)
                 quat.rotateX(rot, rot, 0.05 * gamepad.axes[4]);
             if (gamepad.buttons[4].pressed)
                 quat.rotateZ(rot, rot, -0.05);
