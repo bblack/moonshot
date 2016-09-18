@@ -25,7 +25,8 @@ $(() => {
                     id.data.fill(0x00, i+2, i+3);
                 }
                 return id;
-            })()
+            })(),
+            wire: true
         }
     };
     var skybox = {
@@ -226,10 +227,12 @@ $(() => {
         var texCoords = [];
         var frame = ent.model.frames[0];
         for (var tri of ent.model.triangles) {
-            verts.push.apply(verts, frame.verts[tri[0]]);
-            verts.push.apply(verts, frame.verts[tri[1]]);
-            verts.push.apply(verts, frame.verts[tri[2]]);
-            texCoords.push(0, 0, 1, 0, 0, 1);
+            for (var i = 0; i < (ent.model.wire ? 2 : 1); i++) {
+                verts.push.apply(verts, frame.verts[tri[0]]);
+                verts.push.apply(verts, frame.verts[tri[1]]);
+                verts.push.apply(verts, frame.verts[tri[2]]);
+                texCoords.push(0, 0, 1, 0, 0, 1);
+            }
         }
         gl.bindBuffer(gl.ARRAY_BUFFER, vertBuf);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(_.flatten(verts)), gl.STATIC_DRAW);
@@ -240,7 +243,9 @@ $(() => {
         var uMvMatrix = gl.getUniformLocation(shaderProgram, 'mvMatrix');
         gl.uniformMatrix4fv(uMvMatrix, false, new Float32Array(ent.skybox ? rotMatrix : mvMatrix));
         gl.bindTexture(gl.TEXTURE_2D, ent.model.glTexture);
-        gl.drawArrays(gl.TRIANGLES, 0, ent.model.triangles.length*3);
+        ent.model.wire ?
+            gl.drawArrays(gl.LINES, 0, ent.model.triangles.length*6) :
+            gl.drawArrays(gl.TRIANGLES, 0, ent.model.triangles.length*3);
     }
 
     function render(){
