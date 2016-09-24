@@ -163,8 +163,10 @@ $(() => {
             if (fullbright) {
                 gl_FragColor = color;
             } else {
-                mediump vec3 light = vec3(1, 0, 0);
-                gl_FragColor = vec4(color.rgb * dot(vNorm.xyz , light), color.a);
+                highp float light = dot(vNorm.xyz, vec3(1, 0, 0));
+                light = max(light, 0.0);
+                light += 0.1; // ambient
+                gl_FragColor = vec4(color.rgb * light, color.a);
             }
         }
     `);
