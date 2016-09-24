@@ -26,7 +26,7 @@ $(() => {
                 }
                 return id;
             })(),
-            wire: true
+            // wire: true
         },
         o: quat.create(),
         rot: quat.rotateY(quat.create(), quat.create(), Math.PI / 8),
@@ -68,7 +68,8 @@ $(() => {
                         id.data.fill(0x00, i, i+3);
                 }
                 return id;
-            })()
+            })(),
+            fullbright: true
         },
         skybox: true
     };
@@ -135,12 +136,16 @@ $(() => {
     gl.shaderSource(vertShader, `
         attribute vec3 aVertPos;
         attribute vec2 aTexCoord;
+        attribute vec3 aNorm;
         uniform mat4 projMatrix;
         uniform mat4 mvMatrix;
+        uniform mat4 normMatrix;
         varying highp vec2 vTexCoord;
+        varying highp vec4 vNorm;
         void main(void){
             gl_Position = projMatrix * mvMatrix * vec4(aVertPos, 1.0);
             vTexCoord = aTexCoord;
+            vNorm = normMatrix * vec4(aNorm, 1.0);
             gl_PointSize = 7.0;
         }
     `);
@@ -150,9 +155,17 @@ $(() => {
     var fragShader = gl.createShader(gl.FRAGMENT_SHADER);
     gl.shaderSource(fragShader, `
         varying highp vec2 vTexCoord;
+        varying highp vec4 vNorm;
         uniform sampler2D uSampler;
+        uniform bool fullbright;
         void main(void){
-            gl_FragColor = texture2D(uSampler, vec2(vTexCoord.st));
+            mediump vec4 color = texture2D(uSampler, vec2(vTexCoord.st));
+            if (fullbright) {
+                gl_FragColor = color;
+            } else {
+                mediump vec3 light = vec3(1, 0, 0);
+                gl_FragColor = vec4(color.rgb * dot(vNorm.xyz , light), color.a);
+            }
         }
     `);
     gl.compileShader(fragShader);
@@ -164,6 +177,7 @@ $(() => {
     gl.linkProgram(shaderProgram);
 
     var vertBuf = gl.createBuffer();
+    var normBuf = gl.createBuffer();
 
     var worldCamMatrix = mat4.create();
     var camWorldMatrix = mat4.create();
@@ -258,8 +272,9 @@ $(() => {
 
     var vertTexCoordsBuf = gl.createBuffer();
 
-    function drawEntity(ent, aVertPos, aTexCoord){
+    function drawEntity(ent, aVertPos, aTexCoord, aNorm){
         var verts = [];
+        var norms = [];
         var texCoords = [];
         var frame = ent.model.frames[0];
         for (var tri of ent.model.triangles) {
@@ -267,20 +282,39 @@ $(() => {
                 verts.push.apply(verts, frame.verts[tri[0]]);
                 verts.push.apply(verts, frame.verts[tri[1]]);
                 verts.push.apply(verts, frame.verts[tri[2]]);
+                var norm = vec3.cross(
+                    vec3.create(),
+                    vec3.subtract(vec3.create(), frame.verts[tri[1]], frame.verts[tri[0]]),
+                    vec3.subtract(vec3.create(), frame.verts[tri[2]], frame.verts[tri[1]])
+                );
+                vec3.normalize(norm, norm);
+                norms.push.apply(norms, norm);
+                norms.push.apply(norms, norm);
+                norms.push.apply(norms, norm);
                 texCoords.push(0, 0, 1, 0, 0, 1);
             }
         }
         gl.bindBuffer(gl.ARRAY_BUFFER, vertBuf);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(_.flatten(verts)), gl.STATIC_DRAW);
         gl.vertexAttribPointer(aVertPos, 3, gl.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, normBuf);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(_.flatten(norms)), gl.STATIC_DRAW);
+        gl.vertexAttribPointer(aNorm, 3, gl.FLOAT, false, 0, 0);
         gl.bindBuffer(gl.ARRAY_BUFFER, vertTexCoordsBuf);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(texCoords), gl.STATIC_DRAW);
         gl.vertexAttribPointer(aTexCoord, 2, gl.FLOAT, false, 0, 0);
         var uMvMatrix = gl.getUniformLocation(shaderProgram, 'mvMatrix');
+        var mw = ent.skybox ? mat4.create() : mat4.fromRotationTranslation(mat4.create(), ent.o, ent.pos);
         var entMvMatrix = ent.skybox ? rotMatrix :
-            mat4.mul(mat4.create(), worldCamMatrix, mat4.fromRotationTranslation(mat4.create(), ent.o, ent.pos));
+            mat4.mul(mat4.create(), worldCamMatrix, mw);
         gl.uniformMatrix4fv(uMvMatrix, false, new Float32Array(entMvMatrix));
+        var uNormMatrix = gl.getUniformLocation(shaderProgram, 'normMatrix');
+        gl.uniformMatrix4fv(uNormMatrix, false, new Float32Array(
+            mat4.transpose(mat4.create(), mat4.invert(mat4.create(), mw))
+        ));
         gl.bindTexture(gl.TEXTURE_2D, ent.model.glTexture);
+        var uFullbright = gl.getUniformLocation(shaderProgram, 'fullbright');
+        gl.uniform1i(uFullbright, ent.model.fullbright);
         ent.model.wire ?
             gl.drawArrays(gl.LINES, 0, ent.model.triangles.length*6) :
             gl.drawArrays(gl.TRIANGLES, 0, ent.model.triangles.length*3);
@@ -295,8 +329,10 @@ $(() => {
         gl.enableVertexAttribArray(aVertPos);
         var aTexCoord = gl.getAttribLocation(shaderProgram, 'aTexCoord');
         gl.enableVertexAttribArray(aTexCoord);
+        var aNorm = gl.getAttribLocation(shaderProgram, 'aNorm');
+        gl.enableVertexAttribArray(aNorm);
         for (ent of entities) {
-            drawEntity(ent, aVertPos, aTexCoord);
+            drawEntity(ent, aVertPos, aTexCoord, aNorm);
         }
 
         window.requestAnimationFrame(render);
