@@ -65,7 +65,7 @@ $(() => {
         },
         o: quat.create(),
         rot: quat.rotateY(quat.create(), quat.create(), Math.PI / 8),
-        pos: vec3.fromValues(0, 3, 10)
+        pos: vec3.fromValues(0, 0, 15)
     };
 
     var beacon = {
@@ -150,7 +150,7 @@ $(() => {
         v[2] *= n;
     })
 
-    var entities = [sphere, beacon, skybox];
+    var entities = [sphere, skybox];
 
     var camera = {
         position: vec3.create(),
