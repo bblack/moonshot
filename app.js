@@ -138,6 +138,7 @@ $(() => {
                 }
                 return id;
             })(),
+            mipmap: false,
             fullbright: true
         },
         skybox: true
@@ -197,7 +198,9 @@ $(() => {
         gl.bindTexture(gl.TEXTURE_2D, ent.model.glTexture);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, ent.model.texture);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER,
+            ent.model.mipmap == false ? gl.LINEAR : gl.LINEAR_MIPMAP_NEAREST);
+        gl.generateMipmap(gl.TEXTURE_2D);
         gl.bindTexture(gl.TEXTURE_2D, null);
     }
 
@@ -359,9 +362,15 @@ $(() => {
                     vec3.subtract(vec3.create(), frame.verts[tri[2]], frame.verts[tri[1]])
                 );
                 vec3.normalize(norm, norm);
-                norms.push.apply(norms, norm);
-                norms.push.apply(norms, norm);
-                norms.push.apply(norms, norm);
+                if (ent.model.flatface) {
+                    norms.push.apply(norms, norm);
+                    norms.push.apply(norms, norm);
+                    norms.push.apply(norms, norm);
+                } else {
+                    norms.push.apply(norms, frame.verts[tri[0]]);
+                    norms.push.apply(norms, frame.verts[tri[1]]);
+                    norms.push.apply(norms, frame.verts[tri[2]]);
+                }
                 texCoords.push(0, 0, 1, 0, 0, 1);
             }
         }
