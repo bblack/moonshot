@@ -232,10 +232,11 @@ $(() => {
         uniform bool fullbright;
         void main(void){
             mediump vec4 color = texture2D(uSampler, vec2(vTexCoord.st));
+            highp vec3 norm = normalize(vNorm.xyz); // skip for performance
             if (fullbright) {
                 gl_FragColor = color;
             } else {
-                highp float light = dot(vNorm.xyz, vec3(1, 0, 0));
+                highp float light = dot(norm, vec3(1, 0, 0));
                 light = max(light, 0.0);
                 light += 0.01; // ambient
                 gl_FragColor = vec4(color.rgb * light, color.a);
