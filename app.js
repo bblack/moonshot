@@ -1,6 +1,6 @@
 $(() => {
-    var stacks = 6;
-    var slices = 12;
+    var stacks = 12;
+    var slices = 24;
     var sphere = {
         model: {
             frames: [{
@@ -57,9 +57,9 @@ $(() => {
             texture: (function(){
                 var id = new ImageData(256, 256);
                 id.data.fill(0xff);
-                // for (var i=0; i<id.data.length; i+=4) {
-                //     id.data.fill(0x00, i, i+2);
-                // }
+                for (var i=0; i<id.data.length; i+=4) {
+                    id.data.fill(0x80, i, i+3);
+                }
                 return id;
             })()
         },
@@ -210,12 +210,15 @@ $(() => {
         attribute vec2 aTexCoord;
         attribute vec3 aNorm;
         uniform mat4 projMatrix;
-        uniform mat4 mvMatrix;
+        uniform mat4 mwMatrix;
+        uniform mat4 wvMatrix;
         uniform mat4 normMatrix;
         varying highp vec2 vTexCoord;
         varying highp vec4 vNorm;
+        varying highp vec4 pos;
         void main(void){
-            gl_Position = projMatrix * mvMatrix * vec4(aVertPos, 1.0);
+            pos = mwMatrix * vec4(aVertPos, 1.0);
+            gl_Position = projMatrix * wvMatrix * mwMatrix * vec4(aVertPos, 1.0);
             vTexCoord = aTexCoord;
             vNorm = normMatrix * vec4(aNorm, 1.0);
             gl_PointSize = 7.0;
@@ -228,18 +231,30 @@ $(() => {
     gl.shaderSource(fragShader, `
         varying highp vec2 vTexCoord;
         varying highp vec4 vNorm;
+        varying highp vec4 pos;
         uniform sampler2D uSampler;
         uniform bool fullbright;
+        uniform highp vec3 camPos;
         void main(void){
             mediump vec4 color = texture2D(uSampler, vec2(vTexCoord.st));
-            highp vec3 norm = normalize(vNorm.xyz); // skip for performance
             if (fullbright) {
                 gl_FragColor = color;
             } else {
-                highp float light = dot(norm, vec3(1, 0, 0));
-                light = max(light, 0.0);
-                light += 0.01; // ambient
-                gl_FragColor = vec4(color.rgb * light, color.a);
+                highp vec3 ambient = vec3(0.01);
+
+                highp vec3 norm = normalize(vNorm.xyz);
+                highp vec3 lightDir = vec3(1, 0, 0);
+                highp float lightDirDotNorm = dot(lightDir, norm);
+
+                highp vec3 diffuse = color.rgb * max(0.0, -lightDirDotNorm);
+
+                highp vec3 reflectDir = (lightDirDotNorm >= 0.0) ? vec3(0.0) :
+                    (lightDir - (2.0 * lightDirDotNorm * norm));
+                highp vec3 viewDir = normalize(camPos - (pos.xyz / pos.w));
+                highp float spec = max(0.0, dot(viewDir, reflectDir));
+                spec = pow(spec, 5.0) * 0.5; // magic numbars
+
+                gl_FragColor = vec4(ambient + diffuse + vec3(spec), color.a);
             }
         }
     `);
@@ -384,11 +399,12 @@ $(() => {
         gl.bindBuffer(gl.ARRAY_BUFFER, vertTexCoordsBuf);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(texCoords), gl.STATIC_DRAW);
         gl.vertexAttribPointer(aTexCoord, 2, gl.FLOAT, false, 0, 0);
-        var uMvMatrix = gl.getUniformLocation(shaderProgram, 'mvMatrix');
+        var uMwMatrix = gl.getUniformLocation(shaderProgram, 'mwMatrix');
+        var uWvMatrix = gl.getUniformLocation(shaderProgram, 'wvMatrix');
         var mw = ent.skybox ? mat4.create() : mat4.fromRotationTranslation(mat4.create(), ent.o, ent.pos);
-        var entMvMatrix = ent.skybox ? rotMatrix :
-            mat4.mul(mat4.create(), worldCamMatrix, mw);
-        gl.uniformMatrix4fv(uMvMatrix, false, new Float32Array(entMvMatrix));
+        var wv = ent.skybox ? rotMatrix : worldCamMatrix;
+        gl.uniformMatrix4fv(uMwMatrix, false, mw);
+        gl.uniformMatrix4fv(uWvMatrix, false, wv);
         var uNormMatrix = gl.getUniformLocation(shaderProgram, 'normMatrix');
         gl.uniformMatrix4fv(uNormMatrix, false, new Float32Array(
             mat4.transpose(mat4.create(), mat4.invert(mat4.create(), mw))
@@ -412,6 +428,8 @@ $(() => {
         gl.enableVertexAttribArray(aTexCoord);
         var aNorm = gl.getAttribLocation(shaderProgram, 'aNorm');
         gl.enableVertexAttribArray(aNorm);
+        var uCamPos = gl.getUniformLocation(shaderProgram, 'camPos');
+        gl.uniform3fv(uCamPos, camera.position);
         for (ent of entities) {
             drawEntity(ent, aVertPos, aTexCoord, aNorm);
         }
