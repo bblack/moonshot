@@ -235,6 +235,7 @@ $(() => {
         uniform sampler2D uSampler;
         uniform bool fullbright;
         uniform highp vec3 camPos;
+        uniform highp vec3 lightDir;
         void main(void){
             mediump vec4 color = texture2D(uSampler, vec2(vTexCoord.st));
             if (fullbright) {
@@ -243,7 +244,6 @@ $(() => {
                 highp vec3 ambient = vec3(0.01);
 
                 highp vec3 norm = normalize(vNorm.xyz);
-                highp vec3 lightDir = vec3(1, 0, 0);
                 highp float lightDirDotNorm = dot(lightDir, norm);
 
                 highp vec3 diffuse = color.rgb * max(0.0, -lightDirDotNorm);
@@ -430,6 +430,8 @@ $(() => {
         gl.enableVertexAttribArray(aNorm);
         var uCamPos = gl.getUniformLocation(shaderProgram, 'camPos');
         gl.uniform3fv(uCamPos, camera.position);
+        var uLightDir = gl.getUniformLocation(shaderProgram, 'lightDir');
+        gl.uniform3fv(uLightDir, vec3.fromValues(1, 0, 0));
         for (ent of entities) {
             drawEntity(ent, aVertPos, aTexCoord, aNorm);
         }
