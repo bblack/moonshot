@@ -1,4 +1,23 @@
-$(() => {
+require.config({
+  paths: {
+    'gl-matrix': './bower_components/gl-matrix/dist/gl-matrix',
+    jquery: './bower_components/jquery/dist/jquery.min',
+    mousetrap: './bower_components/mousetrap/mousetrap.min',
+    underscore: './bower_components/underscore/underscore-min'
+  },
+  shim: {
+    jquery: '$',
+    mousetrap: 'Mousetrap',
+    underscore: '_'
+  }
+})
+
+require(['gl-matrix', 'jquery', 'mousetrap', 'underscore'], (glMatrix, $, Mousetrap, _) => {
+  var mat3 = glMatrix.mat3;
+  var mat4 = glMatrix.mat4;
+  var quat = glMatrix.quat;
+  var vec3 = glMatrix.vec3;
+
   var stacks = 12;
   var slices = 24;
   var sphere = {
