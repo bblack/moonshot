@@ -12,7 +12,14 @@ require.config({
   }
 })
 
-require(['gl-matrix', 'jquery', 'underscore', './entities', './keyboard'], (glMatrix, $, _, entities, keyboard) => {
+require([
+  'gl-matrix',
+  'jquery',
+  'underscore',
+  './entities',
+  './keyboard',
+  './gamepad'
+], (glMatrix, $, _, entities, keyboard, gamepad) => {
   var mat3 = glMatrix.mat3;
   var mat4 = glMatrix.mat4;
   var quat = glMatrix.quat;
@@ -25,16 +32,6 @@ require(['gl-matrix', 'jquery', 'underscore', './entities', './keyboard'], (glMa
   };
   var inputState = {};
   keyboard(inputState);
-
-  window.addEventListener('gamepadconnected', (evt) => {
-    console.log('gamepad: ' + evt.gamepad.id);
-    function pollButtons(){
-      console.log(evt.gamepad.buttons)
-      // window.requestAnimationFrame(pollButtons);
-      setTimeout(pollButtons, 500);
-    }
-    // pollButtons();
-  })
 
   var gl = $('canvas')[0].getContext('webgl');
   gl.enable(gl.DEPTH_TEST);
@@ -146,24 +143,7 @@ require(['gl-matrix', 'jquery', 'underscore', './entities', './keyboard'], (glMa
       quat.rotateZ(rot, rot, -0.05);
     if (inputState.rollright)
       quat.rotateZ(rot, rot, 0.05);
-    var gamepad = navigator.getGamepads()[0];
-    if (gamepad) {
-      // TODO: clean this up. put it in a separate function, that is invoked by animation frames, and have it affect inputState like keyboard, so that among other things, it won't allow the player to double up on speed. also dry up the notion (and value) of threshold.
-      if (Math.abs(gamepad.axes[0]) > 0.1)
-        vec3.subtract(camera.position, camera.position,
-          vec3.scale(vec3.create(), left, gamepad.axes[0]));
-      if (Math.abs(gamepad.axes[1]) > 0.1)
-        vec3.subtract(camera.position, camera.position,
-          vec3.scale(vec3.create(), fwd, gamepad.axes[1]));
-      if (Math.abs(gamepad.axes[3]) > 0.1)
-        quat.rotateY(rot, rot, -0.05 * gamepad.axes[3]);
-      if (Math.abs(gamepad.axes[4]) > 0.1)
-        quat.rotateX(rot, rot, 0.05 * gamepad.axes[4]);
-      if (gamepad.buttons[4].pressed)
-        quat.rotateZ(rot, rot, -0.05);
-      if (gamepad.buttons[5].pressed)
-        quat.rotateZ(rot, rot, 0.05);
-    }
+    gamepad.adjustPosAndRot(camera.position, rot);
     quat.mul(camera.o, rot, camera.o);
     var worldCamTranslateMatrix = mat4.fromValues(
       1, 0, 0, 0,
