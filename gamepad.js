@@ -1,10 +1,16 @@
 define(['gl-matrix'], (glMatrix) => {
+  var mat3 = glMatrix.mat3;
   var quat = glMatrix.quat;
   var vec3 = glMatrix.vec3;
 
   // TODO: change this module to affect inputState, like keyboard, so that among other things, it won't allow the player to double up on speed.
   // TODO: make the deadzone inequalities dry, generic, configurable fn
-  function adjustPosAndRot(pos, rot){
+  // TODO: shouldn't need to know about camWorldMatrix
+  function adjustPosAndRot(pos, rot, camWorldMatrix){
+    // get scale only (discard translation)
+    var camWorldScaleMatrix = mat3.fromMat4(mat3.create(), camWorldMatrix);
+    var fwd = vec3.transformMat3(vec3.create(), [0, 0, 0.1],  camWorldScaleMatrix);
+    var left = vec3.transformMat3(vec3.create(), [-0.1, 0, 0], camWorldScaleMatrix);
     var gamepad = navigator.getGamepads()[0];
     if (gamepad) {
       if (Math.abs(gamepad.axes[0]) > 0.1)

@@ -31,7 +31,7 @@ require([
     velocity: vec3.create(),
     o: quat.create()
   };
-
+  var inputs = [keyboard, gamepad];
   var worldCamMatrix = mat4.create();
   var camWorldMatrix = mat4.create();
   var rotMatrix = mat4.create();
@@ -40,8 +40,7 @@ require([
     var sinceLastTick = Date.now() - lastTick;
     lastTick = Date.now();
     var rot = quat.create();
-    keyboard.adjustPosAndRot(camera.position, rot, camWorldMatrix);
-    gamepad.adjustPosAndRot(camera.position, rot);
+    inputs.forEach((input) => input.adjustPosAndRot(camera.position, rot, camWorldMatrix));
     quat.mul(camera.o, rot, camera.o);
     var worldCamTranslateMatrix = mat4.fromValues(
       1, 0, 0, 0,
