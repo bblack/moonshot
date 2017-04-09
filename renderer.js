@@ -1,6 +1,18 @@
-define(['jquery', 'gl-matrix'], ($, glMatrix) => {
+define(['jquery', 'gl-matrix', './vertShaderSource', './fragShaderSource'], ($, glMatrix, vertShaderSource, fragShaderSource) => {
   var mat4 = glMatrix.mat4;
   var vec3 = glMatrix.vec3;
+
+  function buildTexture(ent, gl){
+    ent.model.glTexture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, ent.model.glTexture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, ent.model.texture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER,
+     ent.model.mipmap == false ? gl.LINEAR : gl.LINEAR_MIPMAP_NEAREST);
+    gl.generateMipmap(gl.TEXTURE_2D);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+    return
+  }
 
   function Renderer(canvas, entities, camera, crap){
     // TODO: figure out where crap goes (probably not here at all)
@@ -11,70 +23,16 @@ define(['jquery', 'gl-matrix'], ($, glMatrix) => {
     gl.enable(gl.DEPTH_TEST);
 
     for (var ent of entities) {
-      ent.model.glTexture = gl.createTexture();
-      gl.bindTexture(gl.TEXTURE_2D, ent.model.glTexture);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, ent.model.texture);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER,
-        ent.model.mipmap == false ? gl.LINEAR : gl.LINEAR_MIPMAP_NEAREST);
-      gl.generateMipmap(gl.TEXTURE_2D);
-      gl.bindTexture(gl.TEXTURE_2D, null);
+      buildTexture(ent, gl);
     }
 
     var vertShader = gl.createShader(gl.VERTEX_SHADER);
-    gl.shaderSource(vertShader, `
-      attribute vec3 aVertPos;
-      attribute vec2 aTexCoord;
-      attribute vec3 aNorm;
-      uniform mat4 projMatrix;
-      uniform mat4 mwMatrix;
-      uniform mat4 wvMatrix;
-      uniform mat4 normMatrix;
-      varying highp vec2 vTexCoord;
-      varying highp vec4 vNorm;
-      varying highp vec4 pos;
-      void main(void){
-        pos = mwMatrix * vec4(aVertPos, 1.0);
-        gl_Position = projMatrix * wvMatrix * mwMatrix * vec4(aVertPos, 1.0);
-        vTexCoord = aTexCoord;
-        vNorm = normMatrix * vec4(aNorm, 1.0);
-        gl_PointSize = 7.0;
-      }
-    `);
+    gl.shaderSource(vertShader, vertShaderSource);
     gl.compileShader(vertShader);
     if (!gl.getShaderParameter(vertShader, gl.COMPILE_STATUS))
       throw new Error(gl.getShaderInfoLog(vertShader));
     var fragShader = gl.createShader(gl.FRAGMENT_SHADER);
-    gl.shaderSource(fragShader, `
-      varying highp vec2 vTexCoord;
-      varying highp vec4 vNorm;
-      varying highp vec4 pos;
-      uniform sampler2D uSampler;
-      uniform bool fullbright;
-      uniform highp vec3 camPos;
-      uniform highp vec3 lightDir;
-      void main(void){
-        mediump vec4 color = texture2D(uSampler, vec2(vTexCoord.st));
-        if (fullbright) {
-          gl_FragColor = color;
-        } else {
-          highp vec3 ambient = vec3(0.01);
-
-          highp vec3 norm = normalize(vNorm.xyz);
-          highp float lightDirDotNorm = dot(lightDir, norm);
-
-          highp vec3 diffuse = color.rgb * max(0.0, -lightDirDotNorm);
-
-          highp vec3 reflectDir = (lightDirDotNorm >= 0.0) ? vec3(0.0) :
-            (lightDir - (2.0 * lightDirDotNorm * norm));
-          highp vec3 viewDir = normalize(camPos - (pos.xyz / pos.w));
-          highp float spec = max(0.0, dot(viewDir, reflectDir));
-          spec = pow(spec, 5.0) * 0.5; // magic numbars
-
-          gl_FragColor = vec4(ambient + diffuse + vec3(spec), color.a);
-        }
-      }
-    `);
+    gl.shaderSource(fragShader, fragShaderSource);
     gl.compileShader(fragShader);
     if (!gl.getShaderParameter(fragShader, gl.COMPILE_STATUS))
       throw new Error(gl.getShaderInfoLog(fragShader));
@@ -187,10 +145,6 @@ define(['jquery', 'gl-matrix'], ($, glMatrix) => {
       window.requestAnimationFrame(render);
     }
     render();
-  }
-
-  function tick(){
-
   }
 
   return Renderer;
