@@ -31,8 +31,6 @@ require([
     velocity: vec3.create(),
     o: quat.create()
   };
-  var inputState = {};
-  keyboard(inputState);
 
   var worldCamMatrix = mat4.create();
   var camWorldMatrix = mat4.create();
@@ -41,30 +39,8 @@ require([
   function tick(){
     var sinceLastTick = Date.now() - lastTick;
     lastTick = Date.now();
-    var camWorldScaleMatrix = mat3.fromMat4(mat3.create(), camWorldMatrix); // discard translation
-    var fwd = vec3.transformMat3(vec3.create(), [0, 0, 0.1],  camWorldScaleMatrix);
-    var left = vec3.transformMat3(vec3.create(), [-0.1, 0, 0], camWorldScaleMatrix);
     var rot = quat.create();
-    if (inputState.forward)
-      vec3.add(camera.position, camera.position, fwd);
-    if (inputState.back)
-      vec3.subtract(camera.position, camera.position, fwd);
-    if (inputState.left)
-      vec3.add(camera.position, camera.position, left);
-    if (inputState.right)
-      vec3.subtract(camera.position, camera.position, left);
-    if (inputState.turnleft)
-      quat.rotateY(rot, rot, 0.05);
-    if (inputState.turnright)
-      quat.rotateY(rot, rot, -0.05);
-    if (inputState.pitchup)
-      quat.rotateX(rot, rot, 0.05);
-    if (inputState.pitchdown)
-      quat.rotateX(rot, rot, -0.05);
-    if (inputState.rollleft)
-      quat.rotateZ(rot, rot, -0.05);
-    if (inputState.rollright)
-      quat.rotateZ(rot, rot, 0.05);
+    keyboard.adjustPosAndRot(camera.position, rot, camWorldMatrix);
     gamepad.adjustPosAndRot(camera.position, rot);
     quat.mul(camera.o, rot, camera.o);
     var worldCamTranslateMatrix = mat4.fromValues(
