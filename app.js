@@ -14,13 +14,12 @@ require.config({
 
 require([
   'gl-matrix',
-  'jquery',
   'underscore',
   './entities',
   './keyboard',
   './gamepad',
   './renderer'
-], (glMatrix, $, _, entities, keyboard, gamepad, Renderer) => {
+], (glMatrix, _, entities, keyboard, gamepad, Renderer) => {
   var mat3 = glMatrix.mat3;
   var mat4 = glMatrix.mat4;
   var quat = glMatrix.quat;
@@ -61,7 +60,7 @@ require([
   }
   tick();
 
-  var canvas = $('canvas')[0];
+  var canvas = document.getElementsByTagName('canvas')[0];
   var renderer = new Renderer(canvas, entities, camera, {
     worldCamMatrix: worldCamMatrix,
     rotMatrix: rotMatrix

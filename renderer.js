@@ -1,6 +1,7 @@
-define(['jquery', 'gl-matrix', './vertShaderSource', './fragShaderSource'], ($, glMatrix, vertShaderSource, fragShaderSource) => {
+define(['gl-matrix', './vertShaderSource', './fragShaderSource'], (glMatrix, vertShaderSource, fragShaderSource) => {
   var mat4 = glMatrix.mat4;
   var vec3 = glMatrix.vec3;
+  var MAX_RESOLUTION = [640, 360];
 
   function buildTexture(ent, gl){
     ent.model.glTexture = gl.createTexture();
@@ -15,8 +16,8 @@ define(['jquery', 'gl-matrix', './vertShaderSource', './fragShaderSource'], ($, 
   }
 
   function invalidateCanvasSize(gl, shaderProgram){
-    var w = $(gl.canvas).width();
-    var h = $(gl.canvas).height();
+    var w = gl.canvas.offsetWidth;
+    var h = gl.canvas.offsetHeight;
     var aspect = w/h;
     var f = 1000;
     var n = 0.1;
@@ -65,7 +66,7 @@ define(['jquery', 'gl-matrix', './vertShaderSource', './fragShaderSource'], ($, 
     var normBuf = gl.createBuffer();
 
     invalidateCanvasSize(gl, shaderProgram);
-    $(window).on('resize', () => invalidateCanvasSize(gl, shaderProgram));
+    window.addEventListener('resize', () => invalidateCanvasSize(gl, shaderProgram));
 
     var vertTexCoordsBuf = gl.createBuffer();
 
