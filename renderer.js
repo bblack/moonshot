@@ -14,6 +14,26 @@ define(['jquery', 'gl-matrix', './vertShaderSource', './fragShaderSource'], ($, 
     return
   }
 
+  function invalidateCanvasSize(gl, shaderProgram){
+    var w = $(gl.canvas).width();
+    var h = $(gl.canvas).height();
+    var aspect = w/h;
+    var f = 1000;
+    var n = 0.1;
+    var projMatrix = [
+      1/aspect, 0, 0, 0,
+      0, 1, 0, 0,
+      0, 0, (f+n)/(f-n), 1,
+      0, 0, (-2*f*n)/(f-n), 0
+    ];
+    gl.canvas.width = w;
+    gl.canvas.height = h;
+    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+    gl.useProgram(shaderProgram);
+    var uProjMatrix = gl.getUniformLocation(shaderProgram, 'projMatrix');
+    gl.uniformMatrix4fv(uProjMatrix, false, new Float32Array(projMatrix));
+  };
+
   function Renderer(canvas, entities, camera, crap){
     // TODO: figure out where crap goes (probably not here at all)
     var worldCamMatrix = crap.worldCamMatrix;
@@ -44,27 +64,8 @@ define(['jquery', 'gl-matrix', './vertShaderSource', './fragShaderSource'], ($, 
     var vertBuf = gl.createBuffer();
     var normBuf = gl.createBuffer();
 
-    function invalidateCanvasSize(){
-      var w = $(gl.canvas).width();
-      var h = $(gl.canvas).height();
-      var aspect = w/h;
-      var f = 1000;
-      var n = 0.1;
-      var projMatrix = [
-        1/aspect, 0, 0, 0,
-        0, 1, 0, 0,
-        0, 0, (f+n)/(f-n), 1,
-        0, 0, (-2*f*n)/(f-n), 0
-      ];
-      gl.canvas.width = w;
-      gl.canvas.height = h;
-      gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-      gl.useProgram(shaderProgram);
-      var uProjMatrix = gl.getUniformLocation(shaderProgram, 'projMatrix');
-      gl.uniformMatrix4fv(uProjMatrix, false, new Float32Array(projMatrix));
-    };
-    invalidateCanvasSize();
-    $(window).on('resize', invalidateCanvasSize);
+    invalidateCanvasSize(gl, shaderProgram);
+    $(window).on('resize', () => invalidateCanvasSize(gl, shaderProgram));
 
     var vertTexCoordsBuf = gl.createBuffer();
 
