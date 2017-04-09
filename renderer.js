@@ -5,7 +5,6 @@ define(['jquery', 'gl-matrix'], ($, glMatrix) => {
   function Renderer(canvas, entities, camera, crap){
     // TODO: figure out where crap goes (probably not here at all)
     var worldCamMatrix = crap.worldCamMatrix;
-    var camWorldMatrix = crap.camWorldMatrix;
     var rotMatrix = crap.rotMatrix;
 
     var gl = canvas.getContext('webgl');

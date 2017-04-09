@@ -89,7 +89,6 @@ require([
   var canvas = $('canvas')[0];
   var renderer = new Renderer(canvas, entities, camera, {
     worldCamMatrix: worldCamMatrix,
-    camWorldMatrix: camWorldMatrix,
     rotMatrix: rotMatrix
   });
 })
