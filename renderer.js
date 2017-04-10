@@ -34,6 +34,28 @@ define(['gl-matrix', './vertShaderSource', './fragShaderSource'], (glMatrix, ver
     return
   }
 
+  function calculateNorms(tri, verts, method){
+    var out = new Float32Array(9)
+    if (method == 'flatface') {
+      var norm = vec3.cross(
+        vec3.create(),
+        vec3.subtract(vec3.create(), verts[tri[1]], verts[tri[0]]),
+        vec3.subtract(vec3.create(), verts[tri[2]], verts[tri[1]])
+      );
+      vec3.normalize(norm, norm);
+      for (var i=0; i<3; i++) {
+        out.set(norm, i*3);
+      }
+    } else {
+      // TODO: compute relative to center of mass, or to neighboring triangles.
+      // this falsely assumes a center-of-mass at the origin.
+      for (var i=0; i<3; i++) {
+        out.set(verts[tri[i]], i*3)
+      }
+    }
+    return out;
+  }
+
   function invalidateCanvasSize(gl, shaderProgram){
     var w = gl.canvas.offsetWidth;
     var h = gl.canvas.offsetHeight;
@@ -83,21 +105,7 @@ define(['gl-matrix', './vertShaderSource', './fragShaderSource'], (glMatrix, ver
           verts.push.apply(verts, frame.verts[tri[0]]);
           verts.push.apply(verts, frame.verts[tri[1]]);
           verts.push.apply(verts, frame.verts[tri[2]]);
-          var norm = vec3.cross(
-            vec3.create(),
-            vec3.subtract(vec3.create(), frame.verts[tri[1]], frame.verts[tri[0]]),
-            vec3.subtract(vec3.create(), frame.verts[tri[2]], frame.verts[tri[1]])
-          );
-          vec3.normalize(norm, norm);
-          if (ent.model.flatface) {
-            norms.push.apply(norms, norm);
-            norms.push.apply(norms, norm);
-            norms.push.apply(norms, norm);
-          } else {
-            norms.push.apply(norms, frame.verts[tri[0]]);
-            norms.push.apply(norms, frame.verts[tri[1]]);
-            norms.push.apply(norms, frame.verts[tri[2]]);
-          }
+          norms.push.apply(norms, calculateNorms(tri, frame.verts, ent.model.normMethod))
           texCoords.push(0, 0, 1, 0, 0, 1);
         }
       }
