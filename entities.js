@@ -146,13 +146,8 @@ define(['gl-matrix', 'underscore'], (glMatrix, _) => {
     },
     skybox: true
   };
-  _.each(skybox.model.frames[0].verts, (v) => {
-    // TODO: instead of choosing some big number less than the distance to the far frustum plane, have a special projection matrix for skyboxes that always gives max Z
-    var n = 500;
-    v[0] *= n;
-    v[1] *= n;
-    v[2] *= n;
-  })
+  // TODO: instead of choosing some big number less than the distance to the far frustum plane, have a special projection matrix for skyboxes that always gives max Z
+  _.each(skybox.model.frames[0].verts, (v) => vec3.scale(v, v, 500))
 
   return [sphere, skybox];
 })
