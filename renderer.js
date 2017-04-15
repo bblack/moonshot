@@ -1,26 +1,7 @@
-define(['gl-matrix', './vertShaderSource', './fragShaderSource'], (glMatrix, vertShaderSource, fragShaderSource) => {
+define(['gl-matrix', './shaders/entity'], (glMatrix, entityShader) => {
   var mat4 = glMatrix.mat4;
   var vec3 = glMatrix.vec3;
   var MAX_RESOLUTION = [640, 360];
-
-  function buildShaderProgram(gl, shaderProgram){
-    var vertShader = gl.createShader(gl.VERTEX_SHADER);
-    gl.shaderSource(vertShader, vertShaderSource);
-    gl.compileShader(vertShader);
-    if (!gl.getShaderParameter(vertShader, gl.COMPILE_STATUS))
-      throw new Error(gl.getShaderInfoLog(vertShader));
-    var fragShader = gl.createShader(gl.FRAGMENT_SHADER);
-    gl.shaderSource(fragShader, fragShaderSource);
-    gl.compileShader(fragShader);
-    if (!gl.getShaderParameter(fragShader, gl.COMPILE_STATUS))
-      throw new Error(gl.getShaderInfoLog(fragShader));
-
-    var shaderProgram = gl.createProgram();
-    gl.attachShader(shaderProgram, vertShader);
-    gl.attachShader(shaderProgram, fragShader);
-    gl.linkProgram(shaderProgram);
-    return shaderProgram;
-  }
 
   function buildTexture(ent, gl){
     ent.model.glTexture = gl.createTexture();
@@ -76,15 +57,17 @@ define(['gl-matrix', './vertShaderSource', './fragShaderSource'], (glMatrix, ver
     gl.uniformMatrix4fv(uProjMatrix, false, new Float32Array(projMatrix));
   };
 
-  function Renderer(canvas, entities, camera, crap){
+  function Renderer(canvas, viewModel, camera, crap){
     // TODO: figure out where crap goes (probably not here at all)
     var worldCamMatrix = crap.worldCamMatrix;
     var rotMatrix = crap.rotMatrix;
     var gl = canvas.getContext('webgl');
-    var shaderProgram = buildShaderProgram(gl);
+    var shaderProgram = entityShader(gl);
     var vertBuf = gl.createBuffer();
     var normBuf = gl.createBuffer();
     var vertTexCoordsBuf = gl.createBuffer();
+    var entities = viewModel.entities;
+    var skybox = viewModel.skybox;
 
     gl.enable(gl.DEPTH_TEST);
 

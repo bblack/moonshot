@@ -16,10 +16,12 @@ require([
   'gl-matrix',
   'underscore',
   './entities',
+  './skybox',
+  './viewModel',
   './keyboard',
   './gamepad',
   './renderer'
-], (glMatrix, _, entities, keyboard, gamepad, Renderer) => {
+], (glMatrix, _, entities, skybox, ViewModel, keyboard, gamepad, Renderer) => {
   var mat3 = glMatrix.mat3;
   var mat4 = glMatrix.mat4;
   var quat = glMatrix.quat;
@@ -35,6 +37,10 @@ require([
   var camWorldMatrix = mat4.create();
   var rotMatrix = mat4.create();
   var lastTick;
+  var viewModel = new ViewModel({
+    entities: entities,
+    skybox: skybox
+  });
   function tick(){
     var sinceLastTick = Date.now() - lastTick;
     lastTick = Date.now();
@@ -50,7 +56,7 @@ require([
     mat4.fromQuat(rotMatrix, camera.o);
     mat4.mul(worldCamMatrix, rotMatrix, worldCamTranslateMatrix);
     mat4.invert(camWorldMatrix, worldCamMatrix);
-    for (var ent of entities) {
+    for (var ent of viewModel.entities) {
       if (ent.rot && sinceLastTick) {
         quat.slerp(ent.o, ent.o, quat.mul(quat.create(), ent.rot, ent.o), sinceLastTick/1000);
         // TODO: normalize to prevent drift?
@@ -61,7 +67,7 @@ require([
   tick();
 
   var canvas = document.getElementsByTagName('canvas')[0];
-  var renderer = new Renderer(canvas, entities, camera, {
+  var renderer = new Renderer(canvas, viewModel, camera, {
     worldCamMatrix: worldCamMatrix,
     rotMatrix: rotMatrix
   });

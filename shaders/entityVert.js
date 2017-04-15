@@ -14,6 +14,5 @@ define([], () => `
     gl_Position = projMatrix * wvMatrix * mwMatrix * vec4(aVertPos, 1.0);
     vTexCoord = aTexCoord;
     vNorm = normMatrix * vec4(aNorm, 1.0);
-    gl_PointSize = 7.0;
   }
 `);
