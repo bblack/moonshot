@@ -154,8 +154,8 @@ define(['gl-matrix', './shaders/entity', './shaders/skybox'], (glMatrix, entityS
       gl.vertexAttribPointer(aTexCoord, 2, gl.FLOAT, false, 0, 0);
       var uMwMatrix = gl.getUniformLocation(shaderProgram, 'mwMatrix');
       var uWvMatrix = gl.getUniformLocation(shaderProgram, 'wvMatrix');
-      var mw = ent.skybox ? mat4.create() : mat4.fromRotationTranslation(mat4.create(), ent.o, ent.pos);
-      var wv = ent.skybox ? rotMatrix : worldCamMatrix;
+      var mw = mat4.fromRotationTranslation(mat4.create(), ent.o, ent.pos);
+      var wv = worldCamMatrix;
       gl.uniformMatrix4fv(uMwMatrix, false, mw);
       gl.uniformMatrix4fv(uWvMatrix, false, wv);
       var uNormMatrix = gl.getUniformLocation(shaderProgram, 'normMatrix');
@@ -163,8 +163,7 @@ define(['gl-matrix', './shaders/entity', './shaders/skybox'], (glMatrix, entityS
         mat4.transpose(mat4.create(), mat4.invert(mat4.create(), mw))
       ));
       gl.bindTexture(gl.TEXTURE_2D, ent.model.glTexture);
-      var uFullbright = gl.getUniformLocation(shaderProgram, 'fullbright');
-      gl.uniform1i(uFullbright, ent.model.fullbright);
+
       ent.model.wire ?
         gl.drawArrays(gl.LINES, 0, ent.model.triangles.length*6) :
         gl.drawArrays(gl.TRIANGLES, 0, ent.model.triangles.length*3);

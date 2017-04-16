@@ -38,8 +38,7 @@ define(['gl-matrix'], (glMatrix) => {
         }
         return id;
       })(),
-      mipmap: false,
-      fullbright: true
+      mipmap: false
     },
     skybox: true
   };
