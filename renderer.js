@@ -46,6 +46,15 @@ define(['gl-matrix', './shaders/entity', './shaders/skybox'], (glMatrix, entityS
     ];
   }
 
+  function buildSkyboxProjectionMatrix(aspect){
+    return mat4.fromValues(
+      1/aspect, 0, 0, 0,
+      0, 1, 0, 0,
+      0, 0, 1, 1,
+      0, 0, 0, 0
+    )
+  }
+
   function invalidateCanvasSize(gl, entityShader, skyboxShader){
     var w = gl.canvas.offsetWidth;
     var h = gl.canvas.offsetHeight;
@@ -62,7 +71,7 @@ define(['gl-matrix', './shaders/entity', './shaders/skybox'], (glMatrix, entityS
     gl.uniformMatrix4fv(uProjMatrix, false, new Float32Array(projMatrix));
 
     gl.useProgram(skyboxShader);
-    var skyboxProjMatrix = buildPerspectiveProjectionMatrix(aspect, 0.1, 1.01);
+    var skyboxProjMatrix = buildSkyboxProjectionMatrix(aspect);
     var uSkyboxProjMatrix = gl.getUniformLocation(skyboxShader, 'projMatrix');
     gl.uniformMatrix4fv(uSkyboxProjMatrix, false, new Float32Array(skyboxProjMatrix));
   };
@@ -81,6 +90,7 @@ define(['gl-matrix', './shaders/entity', './shaders/skybox'], (glMatrix, entityS
     var skybox = viewModel.skybox;
 
     gl.enable(gl.DEPTH_TEST);
+    gl.depthFunc(gl.LEQUAL); // let skybox pass depth test at exactly max z
 
     for (var ent of entities) {
       buildTexture(ent, gl);
@@ -162,7 +172,7 @@ define(['gl-matrix', './shaders/entity', './shaders/skybox'], (glMatrix, entityS
 
     function render(){
       gl.clearColor(1, 1, 1, 1);
-      gl.clear(gl.COLOR_BUFFER_BIT);
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
       gl.useProgram(shaderProgram);
       var aVertPos = gl.getAttribLocation(shaderProgram, 'aVertPos');
