@@ -2,6 +2,26 @@ define(['gl-matrix', 'underscore'], (glMatrix, _) => {
   var quat = glMatrix.quat;
   var vec3 = glMatrix.vec3;
 
+  function buildBoundingBox(frame) {
+    var min = [Infinity, Infinity, Infinity];
+    var max = min.map((n) => -n);
+    frame.verts.forEach((vert, i) => {
+      vert.forEach((coord, coordIndex) => {
+        min[coordIndex] = Math.min(min[coordIndex], coord);
+        max[coordIndex] = Math.max(max[coordIndex], coord);
+      });
+    });
+    var bbox = [];
+    for (var j=0; j<8; j++) {
+      bbox.push([
+        (j % 2 ? max : min)[0],
+        ((j >> 1) % 2 ? max : min)[1],
+        ((j >> 2) % 2 ? max : min)[2],
+      ]);
+    }
+    return bbox;
+  }
+
   var stacks = 12;
   var slices = 24;
   var sphere = {
@@ -105,5 +125,11 @@ define(['gl-matrix', 'underscore'], (glMatrix, _) => {
     pos: vec3.fromValues(0, 0, 10)
   };
 
-  return [beacon, sphere];
+  var entities = [beacon, sphere];
+
+  entities.forEach((ent) => {
+    ent.model.frames.forEach((frame) => frame.bbox = buildBoundingBox(frame));
+  });
+  
+  return entities;
 })

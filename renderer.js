@@ -1,4 +1,4 @@
-define(['gl-matrix', './shaders/entity', './shaders/skybox'], (glMatrix, entityShader, buildSkyboxShader) => {
+define(['gl-matrix', './shaders/entity', './shaders/skybox', './shaders/target'], (glMatrix, entityShader, buildSkyboxShader, buildTargetShader) => {
   var mat4 = glMatrix.mat4;
   var vec3 = glMatrix.vec3;
   var MAX_RESOLUTION = [640, 360];
@@ -55,7 +55,16 @@ define(['gl-matrix', './shaders/entity', './shaders/skybox'], (glMatrix, entityS
     )
   }
 
-  function invalidateCanvasSize(gl, entityShader, skyboxShader){
+  function buildTargetProjectionMatrix(aspect){
+    return mat4.fromValues(
+      1/aspect, 0, 0, 0,
+      0, 1, 0, 0,
+      0, 0, 0, 1,
+      0, 0, 0, 0
+    )
+  }
+
+  function invalidateCanvasSize(gl, entityShader, skyboxShader, targetShader){
     var w = gl.canvas.offsetWidth;
     var h = gl.canvas.offsetHeight;
     var aspect = w/h;
@@ -76,6 +85,10 @@ define(['gl-matrix', './shaders/entity', './shaders/skybox'], (glMatrix, entityS
     gl.uniformMatrix4fv(uSkyboxProjMatrix, false, new Float32Array(skyboxProjMatrix));
   };
 
+  function buildModelWorldMatrix(ent){
+    return mat4.fromRotationTranslation(mat4.create(), ent.o, ent.pos);
+  }
+
   function Renderer(canvas, viewModel, camera, crap){
     // TODO: figure out where crap goes (probably not here at all)
     var worldCamMatrix = crap.worldCamMatrix;
@@ -83,11 +96,13 @@ define(['gl-matrix', './shaders/entity', './shaders/skybox'], (glMatrix, entityS
     var gl = canvas.getContext('webgl');
     var shaderProgram = entityShader(gl);
     var skyboxShader = buildSkyboxShader(gl);
+    var targetShader = buildTargetShader(gl);
     var vertBuf = gl.createBuffer();
     var normBuf = gl.createBuffer();
     var vertTexCoordsBuf = gl.createBuffer();
     var entities = viewModel.entities;
     var skybox = viewModel.skybox;
+    var targets = viewModel.targets;
 
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL); // let skybox pass depth test at exactly max z
@@ -97,7 +112,7 @@ define(['gl-matrix', './shaders/entity', './shaders/skybox'], (glMatrix, entityS
     }
     buildTexture(skybox, gl);
 
-    invalidateCanvasSize(gl, shaderProgram, skyboxShader);
+    invalidateCanvasSize(gl, shaderProgram, skyboxShader, targetShader);
     window.addEventListener('resize', () => invalidateCanvasSize(gl, shaderProgram));
 
     function drawSkybox(skybox){
@@ -110,6 +125,8 @@ define(['gl-matrix', './shaders/entity', './shaders/skybox'], (glMatrix, entityS
         memo.push(0, 0, 1, 0, 0, 1);
         return memo;
       }, []);
+
+      gl.useProgram(skyboxShader);
 
       gl.bindBuffer(gl.ARRAY_BUFFER, vertBuf);
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(_.flatten(verts)), gl.STATIC_DRAW);
@@ -158,7 +175,7 @@ define(['gl-matrix', './shaders/entity', './shaders/skybox'], (glMatrix, entityS
       gl.vertexAttribPointer(aTexCoord, 2, gl.FLOAT, false, 0, 0);
       var uMwMatrix = gl.getUniformLocation(shaderProgram, 'mwMatrix');
       var uWvMatrix = gl.getUniformLocation(shaderProgram, 'wvMatrix');
-      var mw = mat4.fromRotationTranslation(mat4.create(), ent.o, ent.pos);
+      var mw = buildModelWorldMatrix(ent);
       var wv = worldCamMatrix;
       gl.uniformMatrix4fv(uMwMatrix, false, mw);
       gl.uniformMatrix4fv(uWvMatrix, false, wv);
@@ -168,9 +185,41 @@ define(['gl-matrix', './shaders/entity', './shaders/skybox'], (glMatrix, entityS
       ));
       gl.bindTexture(gl.TEXTURE_2D, ent.model.glTexture);
 
-      ent.model.wire ?
-        gl.drawArrays(gl.LINES, 0, ent.model.triangles.length*6) :
-        gl.drawArrays(gl.TRIANGLES, 0, ent.model.triangles.length*3);
+      gl.drawArrays(gl.TRIANGLES, 0, ent.model.triangles.length*3);
+    }
+
+    function drawTarget(ent){
+      var frame = ent.model.frames[0];
+      var max = [-Infinity, -Infinity, -Infinity];
+      var min = [Infinity, Infinity, Infinity];
+      var mw = buildModelWorldMatrix(ent);
+      var wv = worldCamMatrix;
+      frame.bbox.forEach((bboxVert) => {
+        var viewVert = vec3.create();
+        vec3.transformMat4(viewVert, bboxVert, mw);
+        vec3.transformMat4(viewVert, viewVert, wv);
+        vec3.transformMat4(viewVert, viewVert, buildTargetProjectionMatrix(gl.canvas.width/gl.canvas.height))
+        viewVert.forEach((coord, i) => {
+          min[i] = Math.min(min[i], coord);
+          max[i] = Math.max(max[i], coord);
+        })
+      });
+      var corners = [
+        min,
+        [min[0], max[1], 0],
+        max,
+        [max[0], min[1], 0]
+      ];
+
+      gl.useProgram(targetShader);
+
+      gl.bindBuffer(gl.ARRAY_BUFFER, vertBuf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(_.flatten(corners)), gl.STATIC_DRAW);
+      aVertPos = gl.getAttribLocation(targetShader, 'aVertPos');
+      gl.enableVertexAttribArray(aVertPos);
+      gl.vertexAttribPointer(aVertPos, 3, gl.FLOAT, false, 0, 0);
+
+      gl.drawArrays(gl.POINTS, 0, 4);
     }
 
     function render(){
@@ -191,8 +240,10 @@ define(['gl-matrix', './shaders/entity', './shaders/skybox'], (glMatrix, entityS
       for (ent of entities) {
         drawEntity(ent, aVertPos, aTexCoord, aNorm);
       }
+      for (ent of targets) {
+        drawTarget(ent);
+      }
 
-      gl.useProgram(skyboxShader);
       drawSkybox(skybox);
 
       window.requestAnimationFrame(render);
