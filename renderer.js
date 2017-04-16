@@ -130,19 +130,23 @@ define(['gl-matrix', './shaders/entity', './shaders/skybox'], (glMatrix, entityS
     }
 
     function drawEntity(ent, aVertPos, aTexCoord, aNorm){
-      var verts = [];
-      var norms = [];
-      var texCoords = [];
       var frame = ent.model.frames[0];
-      for (var tri of ent.model.triangles) {
-        for (var i = 0; i < (ent.model.wire ? 2 : 1); i++) {
-          verts.push.apply(verts, frame.verts[tri[0]]);
-          verts.push.apply(verts, frame.verts[tri[1]]);
-          verts.push.apply(verts, frame.verts[tri[2]]);
-          norms.push.apply(norms, calculateNorms(tri, frame.verts, ent.model.normMethod))
-          texCoords.push(0, 0, 1, 0, 0, 1);
-        }
-      }
+      var triangles = ent.model.triangles;
+      var verts = triangles.reduce((memo, tri) => {
+        tri.forEach((vertIndex) => {
+          frame.verts[vertIndex].forEach((coord) => memo.push(coord));
+        });
+        return memo;
+      }, []);
+      var norms = triangles.reduce((memo, tri) => {
+        norms = calculateNorms(tri, frame.verts, ent.model.normMethod);
+        norms.forEach((coord) => memo.push(coord));
+        return memo;
+      }, []);
+      var texCoords = triangles.reduce((memo, tri) => {
+        memo.push(0, 0, 1, 0, 0, 1);
+        return memo;
+      }, []);
       gl.bindBuffer(gl.ARRAY_BUFFER, vertBuf);
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(_.flatten(verts)), gl.STATIC_DRAW);
       gl.vertexAttribPointer(aVertPos, 3, gl.FLOAT, false, 0, 0);
