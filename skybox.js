@@ -43,8 +43,6 @@ define(['gl-matrix'], (glMatrix) => {
     },
     skybox: true
   };
-  // TODO: instead of choosing some big number less than the distance to the far frustum plane, have a special projection matrix for skyboxes that always gives max Z
-  skybox.model.frames[0].verts.forEach((v) => vec3.scale(v, v, 500));
 
   return skybox;
 })

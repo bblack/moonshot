@@ -62,7 +62,7 @@ define(['gl-matrix', './shaders/entity', './shaders/skybox'], (glMatrix, entityS
     gl.uniformMatrix4fv(uProjMatrix, false, new Float32Array(projMatrix));
 
     gl.useProgram(skyboxShader);
-    var skyboxProjMatrix = buildPerspectiveProjectionMatrix(aspect, 0.1, 1000);
+    var skyboxProjMatrix = buildPerspectiveProjectionMatrix(aspect, 0.1, 1.01);
     var uSkyboxProjMatrix = gl.getUniformLocation(skyboxShader, 'projMatrix');
     gl.uniformMatrix4fv(uSkyboxProjMatrix, false, new Float32Array(skyboxProjMatrix));
   };
