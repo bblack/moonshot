@@ -1,4 +1,4 @@
-define(['gl-matrix', './shaders/entity'], (glMatrix, entityShader) => {
+define(['gl-matrix', './shaders/entity', './shaders/skybox'], (glMatrix, entityShader, buildSkyboxShader) => {
   var mat4 = glMatrix.mat4;
   var vec3 = glMatrix.vec3;
   var MAX_RESOLUTION = [640, 360];
@@ -37,24 +37,34 @@ define(['gl-matrix', './shaders/entity'], (glMatrix, entityShader) => {
     return out;
   }
 
-  function invalidateCanvasSize(gl, shaderProgram){
-    var w = gl.canvas.offsetWidth;
-    var h = gl.canvas.offsetHeight;
-    var aspect = w/h;
-    var f = 1000;
-    var n = 0.1;
-    var projMatrix = [
+  function buildPerspectiveProjectionMatrix(aspect, n, f){
+    return [
       1/aspect, 0, 0, 0,
       0, 1, 0, 0,
       0, 0, (f+n)/(f-n), 1,
       0, 0, (-2*f*n)/(f-n), 0
     ];
+  }
+
+  function invalidateCanvasSize(gl, entityShader, skyboxShader){
+    var w = gl.canvas.offsetWidth;
+    var h = gl.canvas.offsetHeight;
+    var aspect = w/h;
+    var f = 1000;
+    var n = 0.1;
+    var projMatrix = buildPerspectiveProjectionMatrix(aspect, n, f);
     gl.canvas.width = w;
     gl.canvas.height = h;
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-    gl.useProgram(shaderProgram);
-    var uProjMatrix = gl.getUniformLocation(shaderProgram, 'projMatrix');
+
+    gl.useProgram(entityShader);
+    var uProjMatrix = gl.getUniformLocation(entityShader, 'projMatrix');
     gl.uniformMatrix4fv(uProjMatrix, false, new Float32Array(projMatrix));
+
+    gl.useProgram(skyboxShader);
+    var skyboxProjMatrix = buildPerspectiveProjectionMatrix(aspect, 0.1, 1000);
+    var uSkyboxProjMatrix = gl.getUniformLocation(skyboxShader, 'projMatrix');
+    gl.uniformMatrix4fv(uSkyboxProjMatrix, false, new Float32Array(skyboxProjMatrix));
   };
 
   function Renderer(canvas, viewModel, camera, crap){
@@ -63,6 +73,7 @@ define(['gl-matrix', './shaders/entity'], (glMatrix, entityShader) => {
     var rotMatrix = crap.rotMatrix;
     var gl = canvas.getContext('webgl');
     var shaderProgram = entityShader(gl);
+    var skyboxShader = buildSkyboxShader(gl);
     var vertBuf = gl.createBuffer();
     var normBuf = gl.createBuffer();
     var vertTexCoordsBuf = gl.createBuffer();
@@ -74,9 +85,39 @@ define(['gl-matrix', './shaders/entity'], (glMatrix, entityShader) => {
     for (var ent of entities) {
       buildTexture(ent, gl);
     }
+    buildTexture(skybox, gl);
 
-    invalidateCanvasSize(gl, shaderProgram);
+    invalidateCanvasSize(gl, shaderProgram, skyboxShader);
     window.addEventListener('resize', () => invalidateCanvasSize(gl, shaderProgram));
+
+    function drawSkybox(skybox){
+      var frame = skybox.model.frames[0];
+      var verts = skybox.model.triangles.reduce((memo, tri) => {
+        tri.forEach((vertIndex) => memo.push(frame.verts[vertIndex]));
+        return memo;
+      }, []);
+      var texCoords = skybox.model.triangles.reduce((memo, tri) => {
+        memo.push(0, 0, 1, 0, 0, 1);
+        return memo;
+      }, []);
+
+      gl.bindBuffer(gl.ARRAY_BUFFER, vertBuf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(_.flatten(verts)), gl.STATIC_DRAW);
+      aVertPos = gl.getAttribLocation(skyboxShader, 'aVertPos');
+      gl.enableVertexAttribArray(aVertPos);
+      gl.vertexAttribPointer(aVertPos, 3, gl.FLOAT, false, 0, 0);
+
+      gl.bindBuffer(gl.ARRAY_BUFFER, vertTexCoordsBuf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(texCoords), gl.STATIC_DRAW);
+      aTexCoord = gl.getAttribLocation(skyboxShader, 'aTexCoord')
+      gl.enableVertexAttribArray(aTexCoord);
+      gl.vertexAttribPointer(aTexCoord, 2, gl.FLOAT, false, 0, 0);
+
+      var uMvMatrix = gl.getUniformLocation(skyboxShader, 'mvMatrix');
+      gl.uniformMatrix4fv(uMvMatrix, false, rotMatrix);
+      gl.bindTexture(gl.TEXTURE_2D, skybox.model.glTexture);
+      gl.drawArrays(gl.TRIANGLES, 0, skybox.model.triangles.length*3);
+    }
 
     function drawEntity(ent, aVertPos, aTexCoord, aNorm){
       var verts = [];
@@ -137,6 +178,9 @@ define(['gl-matrix', './shaders/entity'], (glMatrix, entityShader) => {
       for (ent of entities) {
         drawEntity(ent, aVertPos, aTexCoord, aNorm);
       }
+
+      gl.useProgram(skyboxShader);
+      drawSkybox(skybox);
 
       window.requestAnimationFrame(render);
     }
