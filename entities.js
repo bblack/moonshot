@@ -130,6 +130,6 @@ define(['gl-matrix', 'underscore'], (glMatrix, _) => {
   entities.forEach((ent) => {
     ent.model.frames.forEach((frame) => frame.bbox = buildBoundingBox(frame));
   });
-  
+
   return entities;
 })

@@ -1,18 +1,24 @@
-define(['gl-matrix', './shaders/entity', './shaders/skybox', './shaders/target'], (glMatrix, entityShader, buildSkyboxShader, buildTargetShader) => {
+define(['gl-matrix', './shaders/entity', './shaders/skybox', './shaders/target', './shaders/targetLabel'], (glMatrix, entityShader, buildSkyboxShader, buildTargetShader, buildTargetLabelShader) => {
   var mat4 = glMatrix.mat4;
   var vec3 = glMatrix.vec3;
   var MAX_RESOLUTION = [640, 360];
 
-  function buildTexture(ent, gl){
-    ent.model.glTexture = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, ent.model.glTexture);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, ent.model.texture);
+  function buildTexture(gl, imageData, opts){
+    opts = opts || {};
+    var glTexture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, glTexture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, imageData);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER,
-     ent.model.mipmap == false ? gl.LINEAR : gl.LINEAR_MIPMAP_NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, opts.maxFilter || gl.LINEAR_MIPMAP_NEAREST);
     gl.generateMipmap(gl.TEXTURE_2D);
     gl.bindTexture(gl.TEXTURE_2D, null);
-    return
+    return glTexture;
+  }
+
+  function buildEntityTexture(ent, gl){
+    ent.model.glTexture = buildTexture(gl, ent.model.texture, {
+      maxFilter: ent.model.mipmap == false ? gl.LINEAR : gl.LINEAR_MIPMAP_NEAREST
+    });
   }
 
   function calculateNorms(tri, verts, method){
@@ -97,6 +103,7 @@ define(['gl-matrix', './shaders/entity', './shaders/skybox', './shaders/target']
     var shaderProgram = entityShader(gl);
     var skyboxShader = buildSkyboxShader(gl);
     var targetShader = buildTargetShader(gl);
+    var targetLabelShader = buildTargetLabelShader(gl);
     var vertBuf = gl.createBuffer();
     var normBuf = gl.createBuffer();
     var vertTexCoordsBuf = gl.createBuffer();
@@ -107,10 +114,13 @@ define(['gl-matrix', './shaders/entity', './shaders/skybox', './shaders/target']
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL); // let skybox pass depth test at exactly max z
 
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
     for (var ent of entities) {
-      buildTexture(ent, gl);
+      buildEntityTexture(ent, gl);
     }
-    buildTexture(skybox, gl);
+    buildEntityTexture(skybox, gl);
 
     invalidateCanvasSize(gl, shaderProgram, skyboxShader, targetShader);
     window.addEventListener('resize', () => invalidateCanvasSize(gl, shaderProgram));
@@ -220,6 +230,43 @@ define(['gl-matrix', './shaders/entity', './shaders/skybox', './shaders/target']
       gl.vertexAttribPointer(aVertPos, 3, gl.FLOAT, false, 0, 0);
 
       gl.drawArrays(gl.POINTS, 0, 4);
+
+      // then the label:
+      var canvas = document.createElement('canvas');
+      canvas.width = 256;
+      canvas.height = 64;
+      var ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#00ff00';
+      ctx.fillText('GREY PLANET', 0, 20);
+      var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      var targetLabelTexture = buildTexture(gl, imageData);
+      gl.bindTexture(gl.TEXTURE_2D, targetLabelTexture);
+
+      gl.useProgram(targetLabelShader);
+
+      gl.bindBuffer(gl.ARRAY_BUFFER, vertBuf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+        min[0], min[1], 0,
+        min[0], min[1] - 1/4, 0,
+        min[0] + 1/2, min[1], 0,
+        min[0] + 1/2, min[1] - 1/4, 0
+      ]), gl.STATIC_DRAW);
+      aVertPos = gl.getAttribLocation(targetLabelShader, 'aVertPos');
+      gl.enableVertexAttribArray(aVertPos);
+      gl.vertexAttribPointer(aVertPos, 3, gl.FLOAT, false, 0, 0);
+
+      gl.bindBuffer(gl.ARRAY_BUFFER, vertTexCoordsBuf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+        0, 0,
+        0, 1,
+        1, 0,
+        1, 1,
+      ]), gl.STATIC_DRAW);
+      aTexCoord = gl.getAttribLocation(targetLabelShader, 'aTexCoord');
+      gl.enableVertexAttribArray(aTexCoord);
+      gl.vertexAttribPointer(aTexCoord, 2, gl.FLOAT, false, 0, 0);
+
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     }
 
     function render(){
@@ -240,11 +287,12 @@ define(['gl-matrix', './shaders/entity', './shaders/skybox', './shaders/target']
       for (ent of entities) {
         drawEntity(ent, aVertPos, aTexCoord, aNorm);
       }
+      drawSkybox(skybox);
       for (ent of targets) {
         drawTarget(ent);
       }
 
-      drawSkybox(skybox);
+
 
       window.requestAnimationFrame(render);
     }
