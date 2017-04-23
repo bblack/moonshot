@@ -123,7 +123,7 @@ define(['gl-matrix', './shaders/entity', './shaders/skybox', './shaders/target',
     buildEntityTexture(skybox, gl);
 
     invalidateCanvasSize(gl, shaderProgram, skyboxShader, targetShader);
-    window.addEventListener('resize', () => invalidateCanvasSize(gl, shaderProgram));
+    window.addEventListener('resize', () => invalidateCanvasSize(gl, shaderProgram, skyboxShader, targetShader));
 
     function drawSkybox(skybox){
       var frame = skybox.model.frames[0];
