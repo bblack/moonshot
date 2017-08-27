@@ -229,6 +229,9 @@ define(['gl-matrix', './shaders/entity', './shaders/skybox', './shaders/target',
       gl.enableVertexAttribArray(aVertPos);
       gl.vertexAttribPointer(aVertPos, 3, gl.FLOAT, false, 0, 0);
 
+      uColor = gl.getUniformLocation(targetShader, 'uColor');
+      gl.uniform4fv(uColor, new Float32Array([6/16, 1, 6/16, 1]));
+
       gl.drawArrays(gl.POINTS, 0, 4);
 
       // then the label:
@@ -236,8 +239,9 @@ define(['gl-matrix', './shaders/entity', './shaders/skybox', './shaders/target',
       canvas.width = 256;
       canvas.height = 64;
       var ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#00ff00';
-      ctx.fillText('GREY PLANET', 0, 20);
+      ctx.fillStyle = '#60ff60';
+      ctx.font = '12px swis721 ltcn bt';
+      ctx.fillText('Arcturis', 0, 20);
       var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       var targetLabelTexture = buildTexture(gl, imageData);
       gl.bindTexture(gl.TEXTURE_2D, targetLabelTexture);

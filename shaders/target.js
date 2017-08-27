@@ -7,8 +7,9 @@ define(['./buildShader',], (buildShader) => {
     }
   `;
   var fragShader = `
+    uniform highp vec4 uColor;
     void main(void){
-      gl_FragColor = vec4(0, 1, 0, 1);
+      gl_FragColor = uColor;
     }
   `;
   return function(gl){
