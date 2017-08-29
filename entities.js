@@ -125,7 +125,40 @@ define(['gl-matrix', 'underscore'], (glMatrix, _) => {
     pos: vec3.fromValues(0, 0, 10)
   };
 
-  var entities = [beacon, sphere];
+  var ship = {
+    model: {
+      triangles: [
+        [0, 1, 2],
+        [2, 3, 0],
+        [0, 1, 4],
+        [1, 2, 4],
+        [2, 3, 4],
+        [3, 0, 4]
+      ],
+      frames: [{
+        verts: [
+          [1/2, 0, 1/2],
+          [1/2, 0, -1/2],
+          [-1/2, 0, -1/2],
+          [-1/2, 0, 1/2],
+          [0, 1, 0]
+        ]
+      }],
+      texture: (() => {
+        var id = new ImageData(32, 32);
+        id.data.fill(0xff);
+        for (var i=0; i<id.data.length; i+=4) {
+          id.data.fill(0xe0, i, i+3);
+        }
+        return id;
+      })()
+    },
+    o: quat.create(),
+    rot: quat.create(),
+    pos: vec3.fromValues(2, 3, 8)
+  }
+
+  var entities = [beacon, sphere, ship];
 
   entities.forEach((ent) => {
     ent.model.frames.forEach((frame) => frame.bbox = buildBoundingBox(frame));

@@ -45,7 +45,19 @@ require([
     var sinceLastTick = Date.now() - lastTick;
     lastTick = Date.now();
     var rot = quat.create();
-    inputs.forEach((input) => input.adjustPosAndRot(camera.position, rot, camWorldMatrix));
+    // What's going on here:
+    // - rot appears to be angular velocity (i.e. delta of orientation)
+    // - each input module has a function adjustPosAndRot, which takes:
+    //     (position vector, delta orientation quaternion, camWorldMatrix) (wtf?)
+    //   each tick, this passes:
+    //     (camera position, identity quaternion, camWorldMatrix)
+    //   and the function translates the position, may or may not change the
+    //   delta orientation from identity, and uses the camWorldMatrix only to
+    //   decide on a scale for the position translation.
+    var camWorldScaleMatrix = mat3.fromMat4(mat3.create(), camWorldMatrix);
+    var fwd = vec3.transformMat3(vec3.create(), [0, 0, 0.1],  camWorldScaleMatrix);
+    var left = vec3.transformMat3(vec3.create(), [-0.1, 0, 0], camWorldScaleMatrix);
+    inputs.forEach((input) => input.adjustPosAndRot(camera.position, rot, fwd, left));
     quat.mul(camera.o, rot, camera.o);
     var worldCamTranslateMatrix = mat4.fromValues(
       1, 0, 0, 0,

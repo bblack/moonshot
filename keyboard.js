@@ -25,12 +25,7 @@ define(['mousetrap', 'gl-matrix'], (Mousetrap, glMatrix) => {
   Mousetrap.bind('e', () => inputState.rollright = true, 'keydown');
   Mousetrap.bind('e', () => inputState.rollright = false, 'keyup');
 
-  // TODO: shouldn't need to know about camWorldMatrix
-  function adjustPosAndRot(pos, rot, camWorldMatrix){
-    // get scale only (discard translation)
-    var camWorldScaleMatrix = mat3.fromMat4(mat3.create(), camWorldMatrix);
-    var fwd = vec3.transformMat3(vec3.create(), [0, 0, 0.1],  camWorldScaleMatrix);
-    var left = vec3.transformMat3(vec3.create(), [-0.1, 0, 0], camWorldScaleMatrix);
+  function adjustPosAndRot(pos, rot, fwd, left){
     if (inputState.forward)
       vec3.add(pos, pos, fwd);
     if (inputState.back)
