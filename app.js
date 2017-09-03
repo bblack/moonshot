@@ -41,6 +41,7 @@ require([
     entities: entities,
     skybox: skybox
   });
+  var ship = entities[2];
   function tick(){
     var sinceLastTick = Date.now() - lastTick;
     lastTick = Date.now();
@@ -57,7 +58,7 @@ require([
     var camWorldScaleMatrix = mat3.fromMat4(mat3.create(), camWorldMatrix);
     var fwd = vec3.transformMat3(vec3.create(), [0, 0, 0.1],  camWorldScaleMatrix);
     var left = vec3.transformMat3(vec3.create(), [-0.1, 0, 0], camWorldScaleMatrix);
-    inputs.forEach((input) => input.adjustPosAndRot(camera.position, rot, fwd, left));
+    inputs.forEach((input) => input.adjustPosAndRot(ship.pos, rot, fwd, left));
     quat.mul(camera.o, rot, camera.o);
     var worldCamTranslateMatrix = mat4.fromValues(
       1, 0, 0, 0,
