@@ -25,28 +25,33 @@ define(['mousetrap', 'gl-matrix'], (Mousetrap, glMatrix) => {
   Mousetrap.bind('e', () => inputState.rollright = true, 'keydown');
   Mousetrap.bind('e', () => inputState.rollright = false, 'keyup');
 
-  function adjustPosAndRot(pos, rot, fwd, left){
+  function val(){
+    var v = vec3.create();
+    var vAng = quat.create();
+
     if (inputState.forward)
-      vec3.add(pos, pos, fwd);
+      vec3.add(v, v, [0, 0, 1]);
     if (inputState.back)
-      vec3.subtract(pos, pos, fwd);
+      vec3.add(v, v, [0, 0, -1]);
     if (inputState.left)
-      vec3.add(pos, pos, left);
+      vec3.add(v, v, [-1, 0, 0]);
     if (inputState.right)
-      vec3.subtract(pos, pos, left);
+      vec3.add(v, v, [1, 0, 0]);
     if (inputState.turnleft)
-      quat.rotateY(rot, rot, 0.05);
+      quat.rotateY(vAng, vAng, 0.05);
     if (inputState.turnright)
-      quat.rotateY(rot, rot, -0.05);
+      quat.rotateY(vAng, vAng, -0.05);
     if (inputState.pitchup)
-      quat.rotateX(rot, rot, 0.05);
+      quat.rotateX(vAng, vAng, 0.05);
     if (inputState.pitchdown)
-      quat.rotateX(rot, rot, -0.05);
+      quat.rotateX(vAng, vAng, -0.05);
     if (inputState.rollleft)
-      quat.rotateZ(rot, rot, -0.05);
+      quat.rotateZ(vAng, vAng, -0.05);
     if (inputState.rollright)
-      quat.rotateZ(rot, rot, 0.05);
+      quat.rotateZ(vAng, vAng, 0.05);
+
+    return {v: v, vAng: vAng};
   }
 
-  return {adjustPosAndRot: adjustPosAndRot};
+  return {val: val};
 })

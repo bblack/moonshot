@@ -32,7 +32,8 @@ require([
     velocity: vec3.create(),
     o: quat.create()
   };
-  var inputs = [keyboard, gamepad];
+  // var inputs = [keyboard, gamepad];
+  var inputs = [keyboard];
   var worldCamMatrix = mat4.create();
   var camWorldMatrix = mat4.create();
   var rotMatrix = mat4.create();
@@ -58,7 +59,14 @@ require([
     var camWorldScaleMatrix = mat3.fromMat4(mat3.create(), camWorldMatrix);
     var fwd = vec3.transformMat3(vec3.create(), [0, 0, 0.1],  camWorldScaleMatrix);
     var left = vec3.transformMat3(vec3.create(), [-0.1, 0, 0], camWorldScaleMatrix);
-    inputs.forEach((input) => input.adjustPosAndRot(ship.pos, rot, fwd, left));
+    inputs.forEach((input) => {
+      var inputVal = input.val();
+      quat.mul(ship.o, ship.o, quat.invert(quat.create(), inputVal.vAng));
+      var v = vec3.create();
+      vec3.scale(v, inputVal.v, 0.1);
+      vec3.transformQuat(v, v, ship.o)
+      vec3.add(ship.pos, ship.pos, v);
+    });
     quat.mul(camera.o, rot, camera.o);
     var worldCamTranslateMatrix = mat4.fromValues(
       1, 0, 0, 0,
