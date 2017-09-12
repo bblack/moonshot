@@ -38,17 +38,17 @@ define(['mousetrap', 'gl-matrix'], (Mousetrap, glMatrix) => {
     if (inputState.right)
       vec3.add(v, v, [1, 0, 0]);
     if (inputState.turnleft)
-      quat.rotateY(vAng, vAng, 0.05);
-    if (inputState.turnright)
       quat.rotateY(vAng, vAng, -0.05);
+    if (inputState.turnright)
+      quat.rotateY(vAng, vAng, 0.05);
     if (inputState.pitchup)
-      quat.rotateX(vAng, vAng, 0.05);
-    if (inputState.pitchdown)
       quat.rotateX(vAng, vAng, -0.05);
+    if (inputState.pitchdown)
+      quat.rotateX(vAng, vAng, 0.05);
     if (inputState.rollleft)
-      quat.rotateZ(vAng, vAng, -0.05);
-    if (inputState.rollright)
       quat.rotateZ(vAng, vAng, 0.05);
+    if (inputState.rollright)
+      quat.rotateZ(vAng, vAng, -0.05);
 
     return {v: v, vAng: vAng};
   }

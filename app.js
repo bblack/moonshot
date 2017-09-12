@@ -61,13 +61,16 @@ require([
     var left = vec3.transformMat3(vec3.create(), [-0.1, 0, 0], camWorldScaleMatrix);
     inputs.forEach((input) => {
       var inputVal = input.val();
-      quat.mul(ship.o, ship.o, quat.invert(quat.create(), inputVal.vAng));
+      quat.mul(ship.o, ship.o, inputVal.vAng);
       var v = vec3.create();
       vec3.scale(v, inputVal.v, 0.1);
       vec3.transformQuat(v, v, ship.o)
       vec3.add(ship.pos, ship.pos, v);
     });
-    quat.mul(camera.o, rot, camera.o);
+    // then update the camera position and orientation based on the ship
+    camera.o = quat.invert(quat.create(), ship.o);
+    camera.position = ship.pos;
+
     var worldCamTranslateMatrix = mat4.fromValues(
       1, 0, 0, 0,
       0, 1, 0, 0,
