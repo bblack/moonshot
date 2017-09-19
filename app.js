@@ -68,10 +68,10 @@ require([
       vec3.add(ship.pos, ship.pos, v);
     });
     // then update the camera position and orientation based on the ship
-    camera.o = quat.invert(quat.create(), ship.o);
+    quat.slerp(camera.o, camera.o, quat.invert(quat.create(), ship.o), 0.1);
     vec3.copy(camera.position, ship.pos);
     var oVec = vec3.create();
-    vec3.transformQuat(oVec, vec3.fromValues(0, 0, 2), ship.o);
+    vec3.transformQuat(oVec, vec3.fromValues(0, -1, 2), ship.o);
     vec3.sub(camera.position, camera.position, oVec);
 
     var worldCamTranslateMatrix = mat4.fromValues(
