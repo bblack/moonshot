@@ -32,8 +32,7 @@ require([
     velocity: vec3.create(),
     o: quat.create()
   };
-  // var inputs = [keyboard, gamepad];
-  var inputs = [keyboard];
+  var inputs = [keyboard, gamepad];
   var worldCamMatrix = mat4.create();
   var camWorldMatrix = mat4.create();
   var rotMatrix = mat4.create();
@@ -46,19 +45,6 @@ require([
   function tick(){
     var sinceLastTick = Date.now() - lastTick;
     lastTick = Date.now();
-    var rot = quat.create();
-    // What's going on here:
-    // - rot appears to be angular velocity (i.e. delta of orientation)
-    // - each input module has a function adjustPosAndRot, which takes:
-    //     (position vector, delta orientation quaternion, camWorldMatrix) (wtf?)
-    //   each tick, this passes:
-    //     (camera position, identity quaternion, camWorldMatrix)
-    //   and the function translates the position, may or may not change the
-    //   delta orientation from identity, and uses the camWorldMatrix only to
-    //   decide on a scale for the position translation.
-    var camWorldScaleMatrix = mat3.fromMat4(mat3.create(), camWorldMatrix);
-    var fwd = vec3.transformMat3(vec3.create(), [0, 0, 0.1],  camWorldScaleMatrix);
-    var left = vec3.transformMat3(vec3.create(), [-0.1, 0, 0], camWorldScaleMatrix);
     inputs.forEach((input) => {
       var inputVal = input.val();
       quat.mul(ship.o, ship.o, inputVal.vAng);
