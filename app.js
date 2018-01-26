@@ -34,7 +34,6 @@ require([
   };
   var inputs = [keyboard, gamepad];
   var worldCamMatrix = mat4.create();
-  var camWorldMatrix = mat4.create();
   var rotMatrix = mat4.create();
   var lastTick;
   var viewModel = new ViewModel({
@@ -68,7 +67,6 @@ require([
     );
     mat4.fromQuat(rotMatrix, camera.o);
     mat4.mul(worldCamMatrix, rotMatrix, worldCamTranslateMatrix);
-    mat4.invert(camWorldMatrix, worldCamMatrix);
     for (var ent of viewModel.entities) {
       if (ent.rot && sinceLastTick) {
         quat.slerp(ent.o, ent.o, quat.mul(quat.create(), ent.rot, ent.o), sinceLastTick/1000);
