@@ -240,8 +240,8 @@ define(['gl-matrix', './shaders/entity', './shaders/skybox', './shaders/target',
       canvas.height = 64;
       var ctx = canvas.getContext('2d');
       ctx.fillStyle = '#60ff60';
-      ctx.font = '12px swis721 ltcn bt';
-      ctx.fillText('Arcturis', 0, 20);
+      ctx.font = '12px carrois gothic';
+      ctx.fillText('Omicron Perseii VII', 0, 20);
       var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       var targetLabelTexture = buildTexture(gl, imageData);
       gl.bindTexture(gl.TEXTURE_2D, targetLabelTexture);
