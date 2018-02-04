@@ -166,7 +166,7 @@ define(['gl-matrix', './shaders/entity', './shaders/skybox', './shaders/target',
         return memo;
       }, []);
       var norms = triangles.reduce((memo, tri) => {
-        norms = calculateNorms(tri, frame.verts, ent.model.normMethod);
+        norms = calculateNorms(tri, frame.verts, 'flatface');
         norms.forEach((coord) => memo.push(coord));
         return memo;
       }, []);
@@ -230,7 +230,7 @@ define(['gl-matrix', './shaders/entity', './shaders/skybox', './shaders/target',
       gl.vertexAttribPointer(aVertPos, 3, gl.FLOAT, false, 0, 0);
 
       uColor = gl.getUniformLocation(targetShader, 'uColor');
-      gl.uniform4fv(uColor, new Float32Array([6/16, 1, 6/16, 1]));
+      gl.uniform4fv(uColor, new Float32Array([1, 1, 1, 1]));
 
       gl.drawArrays(gl.POINTS, 0, 4);
 
@@ -239,7 +239,7 @@ define(['gl-matrix', './shaders/entity', './shaders/skybox', './shaders/target',
       canvas.width = 256;
       canvas.height = 64;
       var ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#60ff60';
+      ctx.fillStyle = '#ffffff';
       ctx.font = '12px carrois gothic';
       ctx.fillText('Omicron Perseii VII', 0, 20);
       var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
