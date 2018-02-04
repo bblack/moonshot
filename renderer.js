@@ -95,6 +95,16 @@ define(['gl-matrix', './shaders/entity', './shaders/skybox', './shaders/target',
     return mat4.fromRotationTranslation(mat4.create(), ent.o, ent.pos);
   }
 
+  function buildEntityNorms(ent) {
+    ent.model.frames.forEach((frame) => {
+      frame.norms = ent.model.triangles.reduce((memo, tri) => {
+        calculateNorms(tri, frame.verts, 'flatface')
+          .forEach((coord) => memo.push(coord));
+        return memo;
+      }, []);
+    });
+  }
+
   function Renderer(canvas, viewModel, camera, crap){
     // TODO: figure out where crap goes (probably not here at all)
     var worldCamMatrix = crap.worldCamMatrix;
@@ -119,6 +129,7 @@ define(['gl-matrix', './shaders/entity', './shaders/skybox', './shaders/target',
 
     for (var ent of entities) {
       buildEntityTexture(ent, gl);
+      buildEntityNorms(ent);
     }
     buildEntityTexture(skybox, gl);
 
@@ -165,11 +176,6 @@ define(['gl-matrix', './shaders/entity', './shaders/skybox', './shaders/target',
         });
         return memo;
       }, []);
-      var norms = triangles.reduce((memo, tri) => {
-        norms = calculateNorms(tri, frame.verts, 'flatface');
-        norms.forEach((coord) => memo.push(coord));
-        return memo;
-      }, []);
       var texCoords = triangles.reduce((memo, tri) => {
         memo.push(0, 0, 1, 0, 0, 1);
         return memo;
@@ -178,7 +184,7 @@ define(['gl-matrix', './shaders/entity', './shaders/skybox', './shaders/target',
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(_.flatten(verts)), gl.STATIC_DRAW);
       gl.vertexAttribPointer(aVertPos, 3, gl.FLOAT, false, 0, 0);
       gl.bindBuffer(gl.ARRAY_BUFFER, normBuf);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(_.flatten(norms)), gl.STATIC_DRAW);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(_.flatten(frame.norms)), gl.STATIC_DRAW);
       gl.vertexAttribPointer(aNorm, 3, gl.FLOAT, false, 0, 0);
       gl.bindBuffer(gl.ARRAY_BUFFER, vertTexCoordsBuf);
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(texCoords), gl.STATIC_DRAW);
