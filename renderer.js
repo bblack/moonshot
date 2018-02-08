@@ -1,4 +1,4 @@
-define(['gl-matrix', './shaders/entity', './shaders/skybox', './shaders/target', './shaders/targetLabel'], (glMatrix, entityShader, buildSkyboxShader, buildTargetShader, buildTargetLabelShader) => {
+define(['gl-matrix', './shaders/entity', './shaders/skybox', './shaders/target', './shaders/targetLabel', './shaders/texToScreenShader'], (glMatrix, entityShader, buildSkyboxShader, buildTargetShader, buildTargetLabelShader, buildTexToScreenShader) => {
   var mat4 = glMatrix.mat4;
   var vec3 = glMatrix.vec3;
   var MAX_RESOLUTION = [640, 360];
@@ -79,7 +79,6 @@ define(['gl-matrix', './shaders/entity', './shaders/skybox', './shaders/target',
     var projMatrix = buildPerspectiveProjectionMatrix(aspect, n, f);
     gl.canvas.width = w;
     gl.canvas.height = h;
-    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
     gl.useProgram(entityShader);
     var uProjMatrix = gl.getUniformLocation(entityShader, 'projMatrix');
@@ -114,6 +113,7 @@ define(['gl-matrix', './shaders/entity', './shaders/skybox', './shaders/target',
     var skyboxShader = buildSkyboxShader(gl);
     var targetShader = buildTargetShader(gl);
     var targetLabelShader = buildTargetLabelShader(gl);
+    var texToScreenShader = buildTexToScreenShader(gl);
     var vertBuf = gl.createBuffer();
     var normBuf = gl.createBuffer();
     var vertTexCoordsBuf = gl.createBuffer();
@@ -135,6 +135,23 @@ define(['gl-matrix', './shaders/entity', './shaders/skybox', './shaders/target',
 
     invalidateCanvasSize(gl, shaderProgram, skyboxShader, targetShader);
     window.addEventListener('resize', () => invalidateCanvasSize(gl, shaderProgram, skyboxShader, targetShader));
+
+    var targetTexture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, targetTexture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1024, 1024, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+    var fb = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+    var attachmentPoint = gl.COLOR_ATTACHMENT0;
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, attachmentPoint, gl.TEXTURE_2D, targetTexture, 0);
+    // create & attach depthBuffer to framebuffer:
+    var depthBuffer = gl.createRenderbuffer();
+    gl.bindRenderbuffer(gl.RENDERBUFFER, depthBuffer);
+    gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, 1024, 1024);
+    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, depthBuffer);
 
     function drawSkybox(skybox){
       var frame = skybox.model.frames[0];
@@ -280,6 +297,9 @@ define(['gl-matrix', './shaders/entity', './shaders/skybox', './shaders/target',
     }
 
     function render(){
+      gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+
+      gl.viewport(0, 0, 1024, 1024);
       gl.clearColor(1, 1, 1, 1);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
@@ -302,7 +322,23 @@ define(['gl-matrix', './shaders/entity', './shaders/skybox', './shaders/target',
         drawTarget(ent);
       }
 
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.bindTexture(gl.TEXTURE_2D, targetTexture);
+      gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+      gl.clearColor(1, 1, 1, 1);
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      gl.useProgram(texToScreenShader);
 
+      gl.bindBuffer(gl.ARRAY_BUFFER, vertBuf);
+      gl.bufferData(
+        gl.ARRAY_BUFFER,
+        new Float32Array([-1, 1, 1, 1, 1, -1, 1, -1, -1, -1, -1, 1]),
+        gl.STATIC_DRAW);
+      var aVertPos = gl.getAttribLocation(texToScreenShader, 'aVertPos');
+      gl.enableVertexAttribArray(aVertPos);
+      gl.vertexAttribPointer(aVertPos, 2, gl.FLOAT, false, 0, 0);
+
+      gl.drawArrays(gl.TRIANGLES, 0, 6);
 
       window.requestAnimationFrame(render);
     }
