@@ -338,6 +338,12 @@ define(['gl-matrix', './shaders/entity', './shaders/skybox', './shaders/target',
       gl.enableVertexAttribArray(aVertPos);
       gl.vertexAttribPointer(aVertPos, 2, gl.FLOAT, false, 0, 0);
 
+      gl.uniform1f(
+        gl.getUniformLocation(texToScreenShader, 'warpPeak'),
+        // 0.0
+        (Date.now() % 10000) / 10000
+      );
+
       gl.drawArrays(gl.TRIANGLES, 0, 6);
 
       window.requestAnimationFrame(render);
