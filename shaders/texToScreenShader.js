@@ -16,6 +16,8 @@ define(['./buildShader'], (buildShader) => {
       mediump float a = 0.01;
       mediump float b = 0.01;
       mediump float c = 0.005;
+
+      // rising warp band:
       st.s += (
         a *
         pow(
@@ -29,12 +31,17 @@ define(['./buildShader'], (buildShader) => {
           -pow((warpPeak - st.t) + b, 2.0) / (2.0 * pow(c, 2.0))
         )
       );
+
+      // general distortion:
       st.s += 0.01*(0.5-fract(sin(st.s)*100000.0));
       st.t += 0.01*(0.5-fract(sin(st.t)*10000.0));
-      mediump vec2 offset = vec2(0.005, 0.0);
+
+      // chromatic aberration:
+      mediump vec2 offset = vec2(0.002, 0.0);
       mediump vec4 colorR = texture2D(uSampler, st - offset);
       mediump vec4 colorG = texture2D(uSampler, st);
       mediump vec4 colorB = texture2D(uSampler, st + offset);
+
       gl_FragColor = vec4(colorR.x, colorG.y, colorB.z, 1.0);
     }
   `;
