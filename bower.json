@@ -19,6 +19,7 @@
     "mousetrap": "^1.6.0",
     "gl-matrix": "^2.3.2",
     "jquery": "^3.1.0",
-    "underscore": "^1.8.3"
+    "underscore": "^1.8.3",
+    "requirejs": "^2.3.6"
   }
 }
